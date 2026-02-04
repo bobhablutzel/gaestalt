@@ -89,3 +89,59 @@ grpcurl -plaintext -d '{"last_name": "smith", "max_results": 25}' localhost:9001
 - Refactored external IDs to alternate IDs with multiple types per member
 - Fixed N+1 query problem in search endpoints using batch fetching
 - Added GetMemberById gRPC endpoint
+
+## Lock Manager (lock/)
+
+### Architecture
+- Spring Boot application with gRPC API
+- Raft consensus for leader election within regional clusters
+- Cross-region quorum for global lock coordination
+- Java 21 with virtual threads
+- gRPC client port: 9090, inter-region port: 9091
+
+### Building and Deploying
+```bash
+# Build (from lock/ directory)
+cd lock
+mvn clean package -DskipTests
+
+# Build Docker image
+docker build -t lockmgr:latest .
+
+# Run with docker-compose (3 regions)
+docker-compose up -d
+
+# Run full cluster (3 regions x 3 Raft nodes = 9 containers)
+docker-compose -f docker-compose-cluster.yml up -d
+
+# Helm deploy (Kubernetes)
+helm upgrade --install lockmgr-us-east helm/lockmgr -f helm/lockmgr/values-us-east.yaml -n lockmgr-us-east --create-namespace
+```
+
+### Testing gRPC Endpoints
+```bash
+# List available services
+grpcurl -plaintext localhost:9090 list
+
+# Acquire a lock
+grpcurl -plaintext -d '{"lock_id": "550e8400-e29b-41d4-a716-446655440000", "client_id": "my-client", "timeout_ms": 30000}' localhost:9090 com.geastalt.lock.grpc.LockService/AcquireLock
+
+# Check lock status
+grpcurl -plaintext -d '{"lock_id": "550e8400-e29b-41d4-a716-446655440000"}' localhost:9090 com.geastalt.lock.grpc.LockService/CheckLock
+
+# Release a lock
+grpcurl -plaintext -d '{"lock_id": "550e8400-e29b-41d4-a716-446655440000", "client_id": "my-client", "fencing_token": 1}' localhost:9090 com.geastalt.lock.grpc.LockService/ReleaseLock
+```
+
+### Key Files
+- Proto definitions: `lock/src/main/proto/lock_service.proto`, `raft_service.proto`, `region_service.proto`
+- gRPC service impl: `lock/src/main/java/com/geastalt/lock/grpc/LockGrpcService.java`
+- Raft consensus: `lock/src/main/java/com/geastalt/lock/raft/RaftNode.java`
+- Lock store: `lock/src/main/java/com/geastalt/lock/service/LockStore.java`
+- Application config: `lock/src/main/resources/application.yml`
+- Helm charts: `lock/helm/lockmgr/`, `lock/helm/lockmgr-istio/`
+
+### gRPC Endpoints
+- AcquireLock - acquire a distributed lock with timeout and fencing token
+- ReleaseLock - release a previously acquired lock (requires matching fencing token)
+- CheckLock - query lock status (holder, TTL, fencing token)

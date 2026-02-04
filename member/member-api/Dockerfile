@@ -1,7 +1,10 @@
-# Build stage
-FROM eclipse-temurin:21-jdk AS build
+# Build stage - use Debian-based image (glibc) for compatibility
+FROM eclipse-temurin:21.0.9_10-jdk AS build
 
 WORKDIR /app
+
+# Install Maven
+RUN apt-get update && apt-get install -y maven && rm -rf /var/lib/apt/lists/*
 
 # Copy parent pom and all modules
 COPY pom.xml .
@@ -14,16 +17,29 @@ COPY member-consumer-address/pom.xml member-consumer-address/
 COPY member-common/src member-common/src
 COPY member-api/src member-api/src
 
-RUN apt-get update && apt-get install -y maven && \
-    mvn clean package -DskipTests -pl member-common,member-api -am
+# Build
+RUN mvn clean package -DskipTests -pl member-common,member-api -am
 
-# Runtime stage
-FROM eclipse-temurin:21-jre
+# Runtime stage - Alpine for smaller image and security fixes
+FROM eclipse-temurin:21.0.9_10-jre-alpine-3.22
 
 WORKDIR /app
 
+# Create non-root user
+RUN addgroup -S member && adduser -S member -G member
+USER member
+
+# Copy built artifact
 COPY --from=build /app/member-api/target/*.jar app.jar
 
-EXPOSE 9002 9001
+# Expose gRPC and REST ports
+EXPOSE 9001 9002
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# Health check (HTTP check on actuator port)
+HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --retries=3 \
+    CMD wget -q --spider http://localhost:9002/actuator/health/liveness || exit 1
+
+# JVM options for containers
+ENV JAVA_OPTS="-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -XX:+UseContainerSupport"
+
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
