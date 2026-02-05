@@ -2,17 +2,17 @@
 -- This avoids functional index overhead by storing pre-computed lowercase values
 
 -- Add the search columns
-ALTER TABLE members ADD COLUMN IF NOT EXISTS last_name_lower VARCHAR(255);
-ALTER TABLE members ADD COLUMN IF NOT EXISTS first_name_lower VARCHAR(255);
+ALTER TABLE public.members ADD COLUMN IF NOT EXISTS last_name_lower VARCHAR(255);
+ALTER TABLE public.members ADD COLUMN IF NOT EXISTS first_name_lower VARCHAR(255);
 
 -- Populate existing data
-UPDATE members SET
+UPDATE public.members SET
     last_name_lower = LOWER(last_name),
     first_name_lower = LOWER(first_name);
 
 -- Create indexes with varchar_pattern_ops for prefix searches
-CREATE INDEX IF NOT EXISTS idx_members_last_name_search ON members (last_name_lower varchar_pattern_ops);
-CREATE INDEX IF NOT EXISTS idx_members_first_name_search ON members (first_name_lower varchar_pattern_ops);
+CREATE INDEX IF NOT EXISTS idx_members_last_name_search ON public.members (last_name_lower varchar_pattern_ops);
+CREATE INDEX IF NOT EXISTS idx_members_first_name_search ON public.members (first_name_lower varchar_pattern_ops);
 
 -- Create trigger function to keep search columns in sync
 CREATE OR REPLACE FUNCTION sync_member_search_columns()
@@ -25,9 +25,9 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Create trigger for INSERT and UPDATE
-DROP TRIGGER IF EXISTS trg_sync_member_search ON members;
+DROP TRIGGER IF EXISTS trg_sync_member_search ON public.members;
 CREATE TRIGGER trg_sync_member_search
-    BEFORE INSERT OR UPDATE ON members
+    BEFORE INSERT OR UPDATE ON public.members
     FOR EACH ROW
     EXECUTE FUNCTION sync_member_search_columns();
 
@@ -35,5 +35,5 @@ CREATE TRIGGER trg_sync_member_search
 DROP INDEX IF EXISTS idx_members_last_name_lower;
 DROP INDEX IF EXISTS idx_members_first_name_lower;
 
-COMMENT ON COLUMN members.last_name_lower IS 'Pre-computed lowercase last_name for efficient case-insensitive search';
-COMMENT ON COLUMN members.first_name_lower IS 'Pre-computed lowercase first_name for efficient case-insensitive search';
+COMMENT ON COLUMN public.members.last_name_lower IS 'Pre-computed lowercase last_name for efficient case-insensitive search';
+COMMENT ON COLUMN public.members.first_name_lower IS 'Pre-computed lowercase first_name for efficient case-insensitive search';
