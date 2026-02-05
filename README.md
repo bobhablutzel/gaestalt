@@ -1,6 +1,18 @@
 # Geastalt
 
-Mono-repo for interconnected systems. Each system is an independent project with its own build, deployment, and Docker context.
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="geastaltlogo-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="geastaltlogo-light.png">
+  <img src="geastaltlogo-light.png" alt="Geastalt name with G made up of parts">
+</picture>
+
+Geastalt accelerates the creation of business applications within medium- to large-scale
+organizations, and is built with concepts from web-scale application building on top 
+of an enterprise architecture model for internal applications.
+
+The geastalt system covers all the key business areas needed for most businesses, 
+including core concepts such as customer and supporting functions such as notification
+and address validation. 
 
 ## Systems
 
@@ -48,7 +60,7 @@ block
   app["Application Layer"]
   block:domainGroup:2
     columns 2
-    Member Address Contract
+    Customer Address Contract Partner
   end
   domain["Domain Layer"]
   block:foundGroup:2
@@ -71,5 +83,5 @@ style domain fill:#634,stroke:#333,color:#fff;
 style domainGroup fill:#634,stroke:#333;
 style app fill:#942,stroke:#333,color:#fff;
 style appGroup fill:#942,stroke:#333;
-style owner fill:#C43,color:#000,stroke-width:0,font-size:70px;
+style owner fill:#087,color:#000,stroke-width:0,font-size:70px;
 ```

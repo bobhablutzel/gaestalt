@@ -9,6 +9,27 @@ Architecture diagrams use Mermaid notation for integration with GitHub
 - Each system builds and deploys independently (no shared parent POM)
 - Docker context is per-system directory
 
+## Standardized Patterns
+
+### Helm Charts
+- Every chart has `templates/_helpers.tpl` with `name`, `fullname`, `chart`, `labels`, `selectorLabels` helpers
+- Kubernetes recommended labels on all resources: `app.kubernetes.io/name`, `/instance`, `/version`, `/managed-by`, `helm.sh/chart`
+- Resource names use `include "<chart>.fullname"`, selectors use `include "<chart>.selectorLabels"`
+- `Chart.yaml` must include `keywords` and `maintainers: Geastalt`
+
+### Dockerfiles
+- Pinned base images: `eclipse-temurin:21.0.9_10-jdk` (build), `eclipse-temurin:21.0.9_10-jre-alpine-3.22` (runtime)
+- Non-root user via `addgroup -S` / `adduser -S` (group/user name matches the service)
+- `HEALTHCHECK` directive included in every Dockerfile
+- JVM options via `JAVA_OPTS` env var: `-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -XX:+UseContainerSupport`
+- Entrypoint: `sh -c "java $JAVA_OPTS -jar app.jar"`
+- Clean apt lists in build stage: `rm -rf /var/lib/apt/lists/*`
+
+### Java Packages
+- Convention: `com.geastalt.<system>.*` (e.g. `com.geastalt.member`, `com.geastalt.lock`)
+- Proto generated code: `com.geastalt.<system>.grpc.generated`
+- Maven groupId: `com.geastalt`
+
 ## Member Service (member/)
 
 ### Architecture
