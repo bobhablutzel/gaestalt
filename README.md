@@ -6,9 +6,9 @@
   <img src="geastaltlogo-light.png" alt="Geastalt name with G made up of parts">
 </picture>
 
-Geastalt accelerates the creation of business applications within medium- to large-scale
-organizations, and is built with concepts from web-scale application building on top 
-of an enterprise architecture model for internal applications.
+Geastalt accelerates the creation of enterprise applications within medium- to large-scale
+organizations. Geastalt is a toolkit of components, each of which can be used independently
+or in conjunction with the other components in the
 
 The geastalt system covers all the key business areas needed for most businesses, 
 including core concepts such as customer and supporting functions such as notification
@@ -18,7 +18,6 @@ and address validation.
 
 | System | Description | Status |
 |--------|-------------|--------|
-| [address](address/) | Address validation consumer using USPS API | Active |
 | [contact](contact/) | Contact management service with gRPC/REST APIs and Kafka consumers | Active |
 | [lock](lock/) | Distributed lock manager with Raft consensus and cross-region quorum | Active |
 
@@ -26,14 +25,11 @@ and address validation.
 
 ```
 geastalt/
-├── address/          # Address validation consumer
-│   ├── src/
-│   ├── helm/
-│   └── Dockerfile
-├── contact/          # Contact management system
+├── contact/           # Contact management system
 │   ├── contact-api/
 │   ├── contact-common/
 │   ├── contact-consumer-ids/
+│   ├── contact-consumer-address/
 │   ├── helm/
 │   ├── k8s/
 │   └── terraform/

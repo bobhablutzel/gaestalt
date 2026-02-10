@@ -7,7 +7,7 @@ public class DefaultPartitionAssignmentService implements PartitionAssignmentSer
 
     @Override
     public int assignPartition(ContactPartitionContext context) {
-        if ("humana".equalsIgnoreCase(context.carrierName())) {
+        if ("humana".equalsIgnoreCase(context.companyName())) {
             return 1;
         }
         return 2;

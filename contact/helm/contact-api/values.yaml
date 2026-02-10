@@ -38,14 +38,3 @@ kafka:
 #   --from-literal=USPS_CLIENT_ID=xxx \
 #   --from-literal=USPS_CLIENT_SECRET=xxx
 secretName: "external-fpe-key-secret"
-
-istio:
-  enabled: true
-  gateway:
-    name: contact-api-gateway
-    hosts:
-      - "*"
-    port: 80
-  virtualService:
-    hosts:
-      - "*"

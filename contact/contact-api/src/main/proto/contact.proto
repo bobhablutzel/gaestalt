@@ -38,22 +38,22 @@ service ContactService {
   // Pending action operations
   rpc HasPendingAction (HasPendingActionRequest) returns (HasPendingActionResponse);
 
-  // Plan operations
-  rpc CreatePlan (CreatePlanRequest) returns (CreatePlanResponse);
-  rpc UpdatePlan (UpdatePlanRequest) returns (UpdatePlanResponse);
-  rpc GetPlan (GetPlanRequest) returns (GetPlanResponse);
-  rpc GetPlans (GetPlansRequest) returns (GetPlansResponse);
-  rpc DeletePlan (DeletePlanRequest) returns (DeletePlanResponse);
+  // Contract operations
+  rpc CreateContract (CreateContractRequest) returns (CreateContractResponse);
+  rpc UpdateContract (UpdateContractRequest) returns (UpdateContractResponse);
+  rpc GetContract (GetContractRequest) returns (GetContractResponse);
+  rpc GetContracts (GetContractsRequest) returns (GetContractsResponse);
+  rpc DeleteContract (DeleteContractRequest) returns (DeleteContractResponse);
 
   // Partition operations
   rpc GetContactPartition (GetContactPartitionRequest) returns (GetContactPartitionResponse);
 
-  // Contact plan operations
-  rpc AddContactPlan (AddContactPlanRequest) returns (AddContactPlanResponse);
-  rpc UpdateContactPlan (UpdateContactPlanRequest) returns (UpdateContactPlanResponse);
-  rpc GetContactPlans (GetContactPlansRequest) returns (GetContactPlansResponse);
-  rpc GetCurrentContactPlan (GetCurrentContactPlanRequest) returns (GetCurrentContactPlanResponse);
-  rpc RemoveContactPlan (RemoveContactPlanRequest) returns (RemoveContactPlanResponse);
+  // Contact contract operations
+  rpc AddContactContract (AddContactContractRequest) returns (AddContactContractResponse);
+  rpc UpdateContactContract (UpdateContactContractRequest) returns (UpdateContactContractResponse);
+  rpc GetContactContracts (GetContactContractsRequest) returns (GetContactContractsResponse);
+  rpc GetCurrentContactContract (GetCurrentContactContractRequest) returns (GetCurrentContactContractResponse);
+  rpc RemoveContactContract (RemoveContactContractRequest) returns (RemoveContactContractResponse);
 }
 
 enum AddressType {
@@ -317,7 +317,7 @@ message CreateContactRequest {
   string last_name = 2;
   bool skip_generate_external_identifiers = 3;  // If true, don't add GENERATE_EXTERNAL_IDENTIFIERS pending action
   bool skip_validate_address = 4;               // If true, don't add VALIDATE_ADDRESS pending action
-  string carrier_name = 5;                      // Used for partition assignment (e.g., "Humana")
+  string company_name = 5;                      // Used for partition assignment (e.g., "Humana")
 }
 
 message CreateContactResponse {
@@ -338,7 +338,7 @@ message ContactInput {
   repeated PhoneInput phones = 3;
   repeated EmailInput emails = 4;
   repeated AddressInput addresses = 5;
-  string carrier_name = 6;                      // Used for partition assignment (e.g., "Humana")
+  string company_name = 6;                      // Used for partition assignment (e.g., "Humana")
 }
 
 message PhoneInput {
@@ -376,112 +376,112 @@ message BulkCreateResult {
   int32 partition_number = 5;   // Populated if success=true
 }
 
-// Plan messages
-message PlanEntry {
-  int64 plan_id = 1;
-  string plan_name = 2;
-  int32 carrier_id = 3;
-  string carrier_name = 4;
+// Contract messages
+message ContractEntry {
+  string contract_id = 1;
+  string contract_name = 2;
+  string company_id = 3;
+  string company_name = 4;
 }
 
-message CreatePlanRequest {
-  string plan_name = 1;
-  int32 carrier_id = 2;
-  string carrier_name = 3;
+message CreateContractRequest {
+  string contract_name = 1;
+  string company_id = 2;
+  string company_name = 3;
 }
 
-message CreatePlanResponse {
-  PlanEntry plan = 1;
+message CreateContractResponse {
+  ContractEntry contract = 1;
 }
 
-message UpdatePlanRequest {
-  int64 plan_id = 1;
-  string plan_name = 2;
-  int32 carrier_id = 3;
-  string carrier_name = 4;
+message UpdateContractRequest {
+  string contract_id = 1;
+  string contract_name = 2;
+  string company_id = 3;
+  string company_name = 4;
 }
 
-message UpdatePlanResponse {
-  PlanEntry plan = 1;
+message UpdateContractResponse {
+  ContractEntry contract = 1;
 }
 
-message GetPlanRequest {
-  int64 plan_id = 1;
+message GetContractRequest {
+  string contract_id = 1;
 }
 
-message GetPlanResponse {
-  PlanEntry plan = 1;
+message GetContractResponse {
+  ContractEntry contract = 1;
 }
 
-message GetPlansRequest {
+message GetContractsRequest {
 }
 
-message GetPlansResponse {
-  repeated PlanEntry plans = 1;
+message GetContractsResponse {
+  repeated ContractEntry contracts = 1;
 }
 
-message DeletePlanRequest {
-  int64 plan_id = 1;
+message DeleteContractRequest {
+  string contract_id = 1;
 }
 
-message DeletePlanResponse {
+message DeleteContractResponse {
   bool success = 1;
 }
 
-// Contact plan messages
-message ContactPlanEntry {
+// Contact contract messages
+message ContactContractEntry {
   int64 id = 1;
   int64 contact_id = 2;
-  PlanEntry plan = 3;
+  ContractEntry contract = 3;
   string effective_date = 4;    // ISO 8601 UTC datetime: YYYY-MM-DDTHH:MM:SSZ
   string expiration_date = 5;   // ISO 8601 UTC datetime: YYYY-MM-DDTHH:MM:SSZ
   bool is_current = 6;
 }
 
-message AddContactPlanRequest {
+message AddContactContractRequest {
   int64 contact_id = 1;
-  int64 plan_id = 2;
+  string contract_id = 2;
   string effective_date = 3;    // ISO 8601 UTC datetime: YYYY-MM-DDTHH:MM:SSZ
   string expiration_date = 4;   // ISO 8601 UTC datetime: YYYY-MM-DDTHH:MM:SSZ
 }
 
-message AddContactPlanResponse {
-  ContactPlanEntry contact_plan = 1;
+message AddContactContractResponse {
+  ContactContractEntry contact_contract = 1;
 }
 
-message UpdateContactPlanRequest {
-  int64 id = 1;                 // Contact plan ID
-  int64 plan_id = 2;
+message UpdateContactContractRequest {
+  int64 id = 1;                 // Contact contract ID
+  string contract_id = 2;
   string effective_date = 3;    // ISO 8601 UTC datetime: YYYY-MM-DDTHH:MM:SSZ
   string expiration_date = 4;   // ISO 8601 UTC datetime: YYYY-MM-DDTHH:MM:SSZ
 }
 
-message UpdateContactPlanResponse {
-  ContactPlanEntry contact_plan = 1;
+message UpdateContactContractResponse {
+  ContactContractEntry contact_contract = 1;
 }
 
-message GetContactPlansRequest {
+message GetContactContractsRequest {
   int64 contact_id = 1;
 }
 
-message GetContactPlansResponse {
-  repeated ContactPlanEntry contact_plans = 1;
+message GetContactContractsResponse {
+  repeated ContactContractEntry contact_contracts = 1;
 }
 
-message GetCurrentContactPlanRequest {
+message GetCurrentContactContractRequest {
   int64 contact_id = 1;
 }
 
-message GetCurrentContactPlanResponse {
-  ContactPlanEntry contact_plan = 1;  // Will be empty if no current plan
+message GetCurrentContactContractResponse {
+  ContactContractEntry contact_contract = 1;  // Will be empty if no current contract
 }
 
-message RemoveContactPlanRequest {
+message RemoveContactContractRequest {
   int64 contact_id = 1;
-  int64 id = 2;                 // Contact plan ID
+  int64 id = 2;                 // Contact contract ID
 }
 
-message RemoveContactPlanResponse {
+message RemoveContactContractResponse {
   bool success = 1;
 }
 

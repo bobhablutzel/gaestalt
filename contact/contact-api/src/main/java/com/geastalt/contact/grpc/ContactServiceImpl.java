@@ -12,18 +12,18 @@ import com.geastalt.contact.repository.ContactLookupRepository;
 import com.geastalt.contact.repository.ContactPendingActionRepository;
 import com.geastalt.contact.repository.ContactRepository;
 import com.geastalt.contact.repository.ContactSearchJdbcRepository;
-import com.geastalt.contact.entity.ContactPlan;
-import com.geastalt.contact.entity.Plan;
+import com.geastalt.contact.entity.ContactContract;
+import com.geastalt.contact.entity.Contract;
 import com.geastalt.contact.service.ContactAddressService;
 import com.geastalt.contact.service.ContactEmailService;
 import com.geastalt.contact.service.ContactPartitionContext;
 import com.geastalt.contact.service.ContactPhoneService;
-import com.geastalt.contact.service.ContactPlanService;
+import com.geastalt.contact.service.ContactContractService;
 import com.geastalt.contact.service.BulkContactService;
 import com.geastalt.contact.service.ContactSearchService;
 import com.geastalt.contact.service.PartitionAssignmentService;
 import com.geastalt.contact.service.PendingActionEventPublisher;
-import com.geastalt.contact.service.PlanService;
+import com.geastalt.contact.service.ContractService;
 import io.grpc.stub.StreamObserver;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.StatusCode;
@@ -39,6 +39,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Slf4j
 @GrpcService
@@ -53,8 +54,8 @@ public class ContactServiceImpl extends ContactServiceGrpc.ContactServiceImplBas
     private final ContactPendingActionRepository contactPendingActionRepository;
     private final PendingActionEventPublisher pendingActionEventPublisher;
     private final BulkContactService bulkContactService;
-    private final PlanService planService;
-    private final ContactPlanService contactPlanService;
+    private final ContractService contractService;
+    private final ContactContractService contactContractService;
     private final PartitionAssignmentService partitionAssignmentService;
     private final ContactLookupRepository contactLookupRepository;
     private final Tracer tracer;
@@ -72,8 +73,8 @@ public class ContactServiceImpl extends ContactServiceGrpc.ContactServiceImplBas
             ContactPendingActionRepository contactPendingActionRepository,
             PendingActionEventPublisher pendingActionEventPublisher,
             BulkContactService bulkContactService,
-            PlanService planService,
-            ContactPlanService contactPlanService,
+            ContractService contractService,
+            ContactContractService contactContractService,
             PartitionAssignmentService partitionAssignmentService,
             ContactLookupRepository contactLookupRepository,
             Tracer tracer,
@@ -88,8 +89,8 @@ public class ContactServiceImpl extends ContactServiceGrpc.ContactServiceImplBas
         this.contactPendingActionRepository = contactPendingActionRepository;
         this.pendingActionEventPublisher = pendingActionEventPublisher;
         this.bulkContactService = bulkContactService;
-        this.planService = planService;
-        this.contactPlanService = contactPlanService;
+        this.contractService = contractService;
+        this.contactContractService = contactContractService;
         this.partitionAssignmentService = partitionAssignmentService;
         this.contactLookupRepository = contactLookupRepository;
         this.tracer = tracer;
@@ -850,8 +851,8 @@ public class ContactServiceImpl extends ContactServiceGrpc.ContactServiceImplBas
     @Override
     public void createContact(CreateContactRequest request,
                               StreamObserver<CreateContactResponse> responseObserver) {
-        log.info("gRPC CreateContact called: firstName={}, lastName={}, carrierName={}, skipGenerateExternalIdentifiers={}, skipValidateAddress={}",
-                request.getFirstName(), request.getLastName(), request.getCarrierName(),
+        log.info("gRPC CreateContact called: firstName={}, lastName={}, companyName={}, skipGenerateExternalIdentifiers={}, skipValidateAddress={}",
+                request.getFirstName(), request.getLastName(), request.getCompanyName(),
                 request.getSkipGenerateExternalIdentifiers(), request.getSkipValidateAddress());
 
         try {
@@ -867,7 +868,7 @@ public class ContactServiceImpl extends ContactServiceGrpc.ContactServiceImplBas
             ContactPartitionContext partitionContext = new ContactPartitionContext(
                     request.getFirstName(),
                     request.getLastName(),
-                    request.getCarrierName());
+                    request.getCompanyName());
             int partitionNumber = partitionAssignmentService.assignPartition(partitionContext);
 
             // Create and save the contact
@@ -1032,103 +1033,80 @@ public class ContactServiceImpl extends ContactServiceGrpc.ContactServiceImplBas
         }
     }
 
-    // Plan operations
+    // Contract operations
 
     @Override
-    public void createPlan(CreatePlanRequest request,
-                           StreamObserver<CreatePlanResponse> responseObserver) {
-        log.info("gRPC CreatePlan called: planName={}, carrierId={}, carrierName={}",
-                request.getPlanName(), request.getCarrierId(), request.getCarrierName());
+    public void createContract(CreateContractRequest request,
+                               StreamObserver<CreateContractResponse> responseObserver) {
+        log.info("gRPC CreateContract called: contractName={}, companyId={}, companyName={}",
+                request.getContractName(), request.getCompanyId(), request.getCompanyName());
 
         try {
-            if (request.getPlanName() == null || request.getPlanName().isBlank()) {
+            if (request.getContractName() == null || request.getContractName().isBlank()) {
                 responseObserver.onError(io.grpc.Status.INVALID_ARGUMENT
-                        .withDescription("Plan name is required")
+                        .withDescription("Contract name is required")
                         .asRuntimeException());
                 return;
             }
-            if (request.getCarrierName() == null || request.getCarrierName().isBlank()) {
+            if (request.getCompanyName() == null || request.getCompanyName().isBlank()) {
                 responseObserver.onError(io.grpc.Status.INVALID_ARGUMENT
-                        .withDescription("Carrier name is required")
+                        .withDescription("Company name is required")
                         .asRuntimeException());
                 return;
             }
 
-            Plan plan = planService.createPlan(
-                    request.getPlanName(),
-                    request.getCarrierId(),
-                    request.getCarrierName());
+            UUID companyId = parseUuid(request.getCompanyId(), "company_id");
 
-            CreatePlanResponse response = CreatePlanResponse.newBuilder()
-                    .setPlan(buildPlanEntry(plan))
+            Contract contract = contractService.createContract(
+                    request.getContractName(),
+                    companyId,
+                    request.getCompanyName());
+
+            CreateContractResponse response = CreateContractResponse.newBuilder()
+                    .setContract(buildContractEntry(contract))
                     .build();
 
             responseObserver.onNext(response);
             responseObserver.onCompleted();
 
         } catch (Exception e) {
-            log.error("Error creating plan", e);
+            log.error("Error creating contract", e);
             responseObserver.onError(io.grpc.Status.INTERNAL
-                    .withDescription("Failed to create plan: " + e.getMessage())
+                    .withDescription("Failed to create contract: " + e.getMessage())
                     .asRuntimeException());
         }
     }
 
     @Override
-    public void updatePlan(UpdatePlanRequest request,
-                           StreamObserver<UpdatePlanResponse> responseObserver) {
-        log.info("gRPC UpdatePlan called: planId={}", request.getPlanId());
+    public void updateContract(UpdateContractRequest request,
+                               StreamObserver<UpdateContractResponse> responseObserver) {
+        log.info("gRPC UpdateContract called: contractId={}", request.getContractId());
 
         try {
-            if (request.getPlanName() == null || request.getPlanName().isBlank()) {
+            if (request.getContractName() == null || request.getContractName().isBlank()) {
                 responseObserver.onError(io.grpc.Status.INVALID_ARGUMENT
-                        .withDescription("Plan name is required")
+                        .withDescription("Contract name is required")
                         .asRuntimeException());
                 return;
             }
-            if (request.getCarrierName() == null || request.getCarrierName().isBlank()) {
+            if (request.getCompanyName() == null || request.getCompanyName().isBlank()) {
                 responseObserver.onError(io.grpc.Status.INVALID_ARGUMENT
-                        .withDescription("Carrier name is required")
+                        .withDescription("Company name is required")
                         .asRuntimeException());
                 return;
             }
 
-            Plan plan = planService.updatePlan(
-                    request.getPlanId(),
-                    request.getPlanName(),
-                    request.getCarrierId(),
-                    request.getCarrierName());
+            UUID contractId = parseUuid(request.getContractId(), "contract_id");
+            UUID companyId = parseUuid(request.getCompanyId(), "company_id");
 
-            UpdatePlanResponse response = UpdatePlanResponse.newBuilder()
-                    .setPlan(buildPlanEntry(plan))
-                    .build();
+            Contract contract = contractService.updateContract(
+                    contractId,
+                    request.getContractName(),
+                    companyId,
+                    request.getCompanyName());
 
-            responseObserver.onNext(response);
-            responseObserver.onCompleted();
-
-        } catch (IllegalArgumentException e) {
-            log.error("Invalid argument: {}", e.getMessage());
-            responseObserver.onError(io.grpc.Status.NOT_FOUND
-                    .withDescription(e.getMessage())
-                    .asRuntimeException());
-        } catch (Exception e) {
-            log.error("Error updating plan", e);
-            responseObserver.onError(io.grpc.Status.INTERNAL
-                    .withDescription("Failed to update plan: " + e.getMessage())
-                    .asRuntimeException());
-        }
-    }
-
-    @Override
-    public void getPlan(GetPlanRequest request,
-                        StreamObserver<GetPlanResponse> responseObserver) {
-        log.debug("gRPC GetPlan called: planId={}", request.getPlanId());
-
-        try {
-            Plan plan = planService.getPlan(request.getPlanId());
-
-            GetPlanResponse response = GetPlanResponse.newBuilder()
-                    .setPlan(buildPlanEntry(plan))
+            UpdateContractResponse response = UpdateContractResponse.newBuilder()
+                    .setContract(buildContractEntry(contract))
                     .build();
 
             responseObserver.onNext(response);
@@ -1140,46 +1118,76 @@ public class ContactServiceImpl extends ContactServiceGrpc.ContactServiceImplBas
                     .withDescription(e.getMessage())
                     .asRuntimeException());
         } catch (Exception e) {
-            log.error("Error getting plan", e);
+            log.error("Error updating contract", e);
             responseObserver.onError(io.grpc.Status.INTERNAL
-                    .withDescription("Failed to get plan: " + e.getMessage())
+                    .withDescription("Failed to update contract: " + e.getMessage())
                     .asRuntimeException());
         }
     }
 
     @Override
-    public void getPlans(GetPlansRequest request,
-                         StreamObserver<GetPlansResponse> responseObserver) {
-        log.debug("gRPC GetPlans called");
+    public void getContract(GetContractRequest request,
+                            StreamObserver<GetContractResponse> responseObserver) {
+        log.debug("gRPC GetContract called: contractId={}", request.getContractId());
 
         try {
-            List<Plan> plans = planService.getAllPlans();
+            UUID contractId = parseUuid(request.getContractId(), "contract_id");
+            Contract contract = contractService.getContract(contractId);
 
-            GetPlansResponse.Builder responseBuilder = GetPlansResponse.newBuilder();
-            for (Plan plan : plans) {
-                responseBuilder.addPlans(buildPlanEntry(plan));
+            GetContractResponse response = GetContractResponse.newBuilder()
+                    .setContract(buildContractEntry(contract))
+                    .build();
+
+            responseObserver.onNext(response);
+            responseObserver.onCompleted();
+
+        } catch (IllegalArgumentException e) {
+            log.error("Invalid argument: {}", e.getMessage());
+            responseObserver.onError(io.grpc.Status.NOT_FOUND
+                    .withDescription(e.getMessage())
+                    .asRuntimeException());
+        } catch (Exception e) {
+            log.error("Error getting contract", e);
+            responseObserver.onError(io.grpc.Status.INTERNAL
+                    .withDescription("Failed to get contract: " + e.getMessage())
+                    .asRuntimeException());
+        }
+    }
+
+    @Override
+    public void getContracts(GetContractsRequest request,
+                             StreamObserver<GetContractsResponse> responseObserver) {
+        log.debug("gRPC GetContracts called");
+
+        try {
+            List<Contract> contracts = contractService.getAllContracts();
+
+            GetContractsResponse.Builder responseBuilder = GetContractsResponse.newBuilder();
+            for (Contract contract : contracts) {
+                responseBuilder.addContracts(buildContractEntry(contract));
             }
 
             responseObserver.onNext(responseBuilder.build());
             responseObserver.onCompleted();
 
         } catch (Exception e) {
-            log.error("Error getting plans", e);
+            log.error("Error getting contracts", e);
             responseObserver.onError(io.grpc.Status.INTERNAL
-                    .withDescription("Failed to get plans: " + e.getMessage())
+                    .withDescription("Failed to get contracts: " + e.getMessage())
                     .asRuntimeException());
         }
     }
 
     @Override
-    public void deletePlan(DeletePlanRequest request,
-                           StreamObserver<DeletePlanResponse> responseObserver) {
-        log.info("gRPC DeletePlan called: planId={}", request.getPlanId());
+    public void deleteContract(DeleteContractRequest request,
+                               StreamObserver<DeleteContractResponse> responseObserver) {
+        log.info("gRPC DeleteContract called: contractId={}", request.getContractId());
 
         try {
-            planService.deletePlan(request.getPlanId());
+            UUID contractId = parseUuid(request.getContractId(), "contract_id");
+            contractService.deleteContract(contractId);
 
-            DeletePlanResponse response = DeletePlanResponse.newBuilder()
+            DeleteContractResponse response = DeleteContractResponse.newBuilder()
                     .setSuccess(true)
                     .build();
 
@@ -1192,43 +1200,44 @@ public class ContactServiceImpl extends ContactServiceGrpc.ContactServiceImplBas
                     .withDescription(e.getMessage())
                     .asRuntimeException());
         } catch (Exception e) {
-            log.error("Error deleting plan", e);
+            log.error("Error deleting contract", e);
             responseObserver.onError(io.grpc.Status.INTERNAL
-                    .withDescription("Failed to delete plan: " + e.getMessage())
+                    .withDescription("Failed to delete contract: " + e.getMessage())
                     .asRuntimeException());
         }
     }
 
-    private PlanEntry buildPlanEntry(Plan plan) {
-        return PlanEntry.newBuilder()
-                .setPlanId(plan.getId())
-                .setPlanName(plan.getPlanName())
-                .setCarrierId(plan.getCarrierId())
-                .setCarrierName(plan.getCarrierName())
+    private ContractEntry buildContractEntry(Contract contract) {
+        return ContractEntry.newBuilder()
+                .setContractId(contract.getId().toString())
+                .setContractName(contract.getContractName())
+                .setCompanyId(contract.getCompanyId().toString())
+                .setCompanyName(contract.getCompanyName())
                 .build();
     }
 
-    // Contact plan operations
+    // Contact contract operations
 
     @Override
-    public void addContactPlan(AddContactPlanRequest request,
-                              StreamObserver<AddContactPlanResponse> responseObserver) {
-        log.info("gRPC AddContactPlan called: contactId={}, planId={}, effectiveDate={}, expirationDate={}",
-                request.getContactId(), request.getPlanId(),
+    public void addContactContract(AddContactContractRequest request,
+                                   StreamObserver<AddContactContractResponse> responseObserver) {
+        log.info("gRPC AddContactContract called: contactId={}, contractId={}, effectiveDate={}, expirationDate={}",
+                request.getContactId(), request.getContractId(),
                 request.getEffectiveDate(), request.getExpirationDate());
 
         try {
             OffsetDateTime effectiveDate = parseDateTime(request.getEffectiveDate(), "effective_date");
             OffsetDateTime expirationDate = parseDateTime(request.getExpirationDate(), "expiration_date");
+            UUID contractId = parseUuid(request.getContractId(), "contract_id");
 
-            ContactPlan contactPlan = contactPlanService.addContactPlan(
+            ContactContract contactContract = contactContractService.addContactContract(
                     request.getContactId(),
-                    request.getPlanId(),
+                    contractId,
                     effectiveDate,
                     expirationDate);
 
-            AddContactPlanResponse response = AddContactPlanResponse.newBuilder()
-                    .setContactPlan(buildContactPlanEntry(contactPlan))
+            AddContactContractResponse response = AddContactContractResponse.newBuilder()
+                    .setContactContract(buildContactContractEntry(contactContract))
                     .build();
 
             responseObserver.onNext(response);
@@ -1245,32 +1254,33 @@ public class ContactServiceImpl extends ContactServiceGrpc.ContactServiceImplBas
                     .withDescription(e.getMessage())
                     .asRuntimeException());
         } catch (Exception e) {
-            log.error("Error adding contact plan", e);
+            log.error("Error adding contact contract", e);
             responseObserver.onError(io.grpc.Status.INTERNAL
-                    .withDescription("Failed to add contact plan: " + e.getMessage())
+                    .withDescription("Failed to add contact contract: " + e.getMessage())
                     .asRuntimeException());
         }
     }
 
     @Override
-    public void updateContactPlan(UpdateContactPlanRequest request,
-                                 StreamObserver<UpdateContactPlanResponse> responseObserver) {
-        log.info("gRPC UpdateContactPlan called: id={}, planId={}, effectiveDate={}, expirationDate={}",
-                request.getId(), request.getPlanId(),
+    public void updateContactContract(UpdateContactContractRequest request,
+                                      StreamObserver<UpdateContactContractResponse> responseObserver) {
+        log.info("gRPC UpdateContactContract called: id={}, contractId={}, effectiveDate={}, expirationDate={}",
+                request.getId(), request.getContractId(),
                 request.getEffectiveDate(), request.getExpirationDate());
 
         try {
             OffsetDateTime effectiveDate = parseDateTime(request.getEffectiveDate(), "effective_date");
             OffsetDateTime expirationDate = parseDateTime(request.getExpirationDate(), "expiration_date");
+            UUID contractId = parseUuid(request.getContractId(), "contract_id");
 
-            ContactPlan contactPlan = contactPlanService.updateContactPlan(
+            ContactContract contactContract = contactContractService.updateContactContract(
                     request.getId(),
-                    request.getPlanId(),
+                    contractId,
                     effectiveDate,
                     expirationDate);
 
-            UpdateContactPlanResponse response = UpdateContactPlanResponse.newBuilder()
-                    .setContactPlan(buildContactPlanEntry(contactPlan))
+            UpdateContactContractResponse response = UpdateContactContractResponse.newBuilder()
+                    .setContactContract(buildContactContractEntry(contactContract))
                     .build();
 
             responseObserver.onNext(response);
@@ -1287,69 +1297,69 @@ public class ContactServiceImpl extends ContactServiceGrpc.ContactServiceImplBas
                     .withDescription(e.getMessage())
                     .asRuntimeException());
         } catch (Exception e) {
-            log.error("Error updating contact plan", e);
+            log.error("Error updating contact contract", e);
             responseObserver.onError(io.grpc.Status.INTERNAL
-                    .withDescription("Failed to update contact plan: " + e.getMessage())
+                    .withDescription("Failed to update contact contract: " + e.getMessage())
                     .asRuntimeException());
         }
     }
 
     @Override
-    public void getContactPlans(GetContactPlansRequest request,
-                               StreamObserver<GetContactPlansResponse> responseObserver) {
-        log.debug("gRPC GetContactPlans called: contactId={}", request.getContactId());
+    public void getContactContracts(GetContactContractsRequest request,
+                                    StreamObserver<GetContactContractsResponse> responseObserver) {
+        log.debug("gRPC GetContactContracts called: contactId={}", request.getContactId());
 
         try {
-            List<ContactPlan> contactPlans = contactPlanService.getContactPlans(request.getContactId());
+            List<ContactContract> contactContracts = contactContractService.getContactContracts(request.getContactId());
 
-            GetContactPlansResponse.Builder responseBuilder = GetContactPlansResponse.newBuilder();
-            for (ContactPlan contactPlan : contactPlans) {
-                responseBuilder.addContactPlans(buildContactPlanEntry(contactPlan));
+            GetContactContractsResponse.Builder responseBuilder = GetContactContractsResponse.newBuilder();
+            for (ContactContract contactContract : contactContracts) {
+                responseBuilder.addContactContracts(buildContactContractEntry(contactContract));
             }
 
             responseObserver.onNext(responseBuilder.build());
             responseObserver.onCompleted();
 
         } catch (Exception e) {
-            log.error("Error getting contact plans", e);
+            log.error("Error getting contact contracts", e);
             responseObserver.onError(io.grpc.Status.INTERNAL
-                    .withDescription("Failed to get contact plans: " + e.getMessage())
+                    .withDescription("Failed to get contact contracts: " + e.getMessage())
                     .asRuntimeException());
         }
     }
 
     @Override
-    public void getCurrentContactPlan(GetCurrentContactPlanRequest request,
-                                     StreamObserver<GetCurrentContactPlanResponse> responseObserver) {
-        log.debug("gRPC GetCurrentContactPlan called: contactId={}", request.getContactId());
+    public void getCurrentContactContract(GetCurrentContactContractRequest request,
+                                          StreamObserver<GetCurrentContactContractResponse> responseObserver) {
+        log.debug("gRPC GetCurrentContactContract called: contactId={}", request.getContactId());
 
         try {
-            Optional<ContactPlan> currentPlan = contactPlanService.getCurrentContactPlan(request.getContactId());
+            Optional<ContactContract> currentContract = contactContractService.getCurrentContactContract(request.getContactId());
 
-            GetCurrentContactPlanResponse.Builder responseBuilder = GetCurrentContactPlanResponse.newBuilder();
-            currentPlan.ifPresent(contactPlan -> responseBuilder.setContactPlan(buildContactPlanEntry(contactPlan)));
+            GetCurrentContactContractResponse.Builder responseBuilder = GetCurrentContactContractResponse.newBuilder();
+            currentContract.ifPresent(contactContract -> responseBuilder.setContactContract(buildContactContractEntry(contactContract)));
 
             responseObserver.onNext(responseBuilder.build());
             responseObserver.onCompleted();
 
         } catch (Exception e) {
-            log.error("Error getting current contact plan", e);
+            log.error("Error getting current contact contract", e);
             responseObserver.onError(io.grpc.Status.INTERNAL
-                    .withDescription("Failed to get current contact plan: " + e.getMessage())
+                    .withDescription("Failed to get current contact contract: " + e.getMessage())
                     .asRuntimeException());
         }
     }
 
     @Override
-    public void removeContactPlan(RemoveContactPlanRequest request,
-                                 StreamObserver<RemoveContactPlanResponse> responseObserver) {
-        log.info("gRPC RemoveContactPlan called: contactId={}, id={}",
+    public void removeContactContract(RemoveContactContractRequest request,
+                                      StreamObserver<RemoveContactContractResponse> responseObserver) {
+        log.info("gRPC RemoveContactContract called: contactId={}, id={}",
                 request.getContactId(), request.getId());
 
         try {
-            contactPlanService.removeContactPlan(request.getContactId(), request.getId());
+            contactContractService.removeContactContract(request.getContactId(), request.getId());
 
-            RemoveContactPlanResponse response = RemoveContactPlanResponse.newBuilder()
+            RemoveContactContractResponse response = RemoveContactContractResponse.newBuilder()
                     .setSuccess(true)
                     .build();
 
@@ -1362,9 +1372,9 @@ public class ContactServiceImpl extends ContactServiceGrpc.ContactServiceImplBas
                     .withDescription(e.getMessage())
                     .asRuntimeException());
         } catch (Exception e) {
-            log.error("Error removing contact plan", e);
+            log.error("Error removing contact contract", e);
             responseObserver.onError(io.grpc.Status.INTERNAL
-                    .withDescription("Failed to remove contact plan: " + e.getMessage())
+                    .withDescription("Failed to remove contact contract: " + e.getMessage())
                     .asRuntimeException());
         }
     }
@@ -1380,17 +1390,28 @@ public class ContactServiceImpl extends ContactServiceGrpc.ContactServiceImplBas
         }
     }
 
-    private ContactPlanEntry buildContactPlanEntry(ContactPlan contactPlan) {
-        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
-        boolean isCurrent = !contactPlan.getEffectiveDate().isAfter(now)
-                && contactPlan.getExpirationDate().isAfter(now);
+    private UUID parseUuid(String uuidStr, String fieldName) {
+        if (uuidStr == null || uuidStr.isBlank()) {
+            throw new IllegalArgumentException(fieldName + " is required");
+        }
+        try {
+            return UUID.fromString(uuidStr);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException(fieldName + " must be a valid UUID");
+        }
+    }
 
-        return ContactPlanEntry.newBuilder()
-                .setId(contactPlan.getId())
-                .setContactId(contactPlan.getContact().getId())
-                .setPlan(buildPlanEntry(contactPlan.getPlan()))
-                .setEffectiveDate(contactPlan.getEffectiveDate().atZoneSameInstant(ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT))
-                .setExpirationDate(contactPlan.getExpirationDate().atZoneSameInstant(ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT))
+    private ContactContractEntry buildContactContractEntry(ContactContract contactContract) {
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        boolean isCurrent = !contactContract.getEffectiveDate().isAfter(now)
+                && contactContract.getExpirationDate().isAfter(now);
+
+        return ContactContractEntry.newBuilder()
+                .setId(contactContract.getId())
+                .setContactId(contactContract.getContact().getId())
+                .setContract(buildContractEntry(contactContract.getContract()))
+                .setEffectiveDate(contactContract.getEffectiveDate().atZoneSameInstant(ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT))
+                .setExpirationDate(contactContract.getExpirationDate().atZoneSameInstant(ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT))
                 .setIsCurrent(isCurrent)
                 .build();
     }

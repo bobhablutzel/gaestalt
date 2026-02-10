@@ -28,8 +28,8 @@ erDiagram
     Contact ||--o{ ContactAddress : has
     Contact ||--o{ ContactEmail : has
     Contact ||--o{ ContactPhone : has
-    Contact ||--o{ ContactPlan : has
-    ContactPlan }o--|| Plan : references
+    Contact ||--o{ ContactContract : has
+    ContactContract }o--|| Contract : references
     ContactAddress }o--|| StandardizedAddress : references
 
     Contact {
@@ -60,17 +60,17 @@ erDiagram
         AddressType addressType
     }
 
-    Plan {
-        Long id PK
-        String planName
-        Integer carrierId
-        String carrierName
+    Contract {
+        UUID id PK
+        String contractName
+        UUID companyId
+        String companyName
     }
 
-    ContactPlan {
+    ContactContract {
         Long id PK
         Long contactId FK
-        Long planId FK
+        UUID contractId FK
         OffsetDateTime effectiveDate
         OffsetDateTime expirationDate
     }
@@ -137,8 +137,8 @@ Manages OAuth tokens for USPS API authentication.
 | `ContactAddressRepository` | ContactAddress | `findByContactId` |
 | `ContactEmailRepository` | ContactEmail | `findByContactId` |
 | `ContactPhoneRepository` | ContactPhone | `findByContactId` |
-| `PlanRepository` | Plan | `findByCarrierId` |
-| `ContactPlanRepository` | ContactPlan | `findByContactIdWithPlan`, `findCurrentPlan`, `findOverlappingPlans` |
+| `ContractRepository` | Contract | `findByCompanyId` |
+| `ContactContractRepository` | ContactContract | `findByContactIdWithContract`, `findCurrentContract`, `findOverlappingContracts` |
 | `StandardizedAddressRepository` | StandardizedAddress | `findByStreetAddressAndCity...` |
 | `ContactSearchJdbcRepository` | - | JDBC-based search operations |
 

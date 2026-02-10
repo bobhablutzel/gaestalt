@@ -1,30 +1,19 @@
-# Default values for lockmgr-istio
+# Default values for contact-istio
 # This is a YAML-formatted file.
 
 # Gateway configuration
 gateway:
-  name: lockmgr-gateway
+  name: contact-gateway
   host: "*"
   selector:
     istio: ingressgateway
-  tls:
-    enabled: true
-    mode: SIMPLE
-    credentialName: lockmgr-tls-cert
 
-# Regions configuration
-regions:
-  - id: us-east
-    namespace: lockmgr-us-east
-    serviceName: lockmgr
-    servicePort: 9090
-  - id: us-west
-    namespace: lockmgr-us-west
-    serviceName: lockmgr
-    servicePort: 9090
-
-# Default region for requests without x-region header
-defaultRegion: us-east
+# Service configuration
+service:
+  name: contact-api
+  namespace: contact
+  grpcPort: 9001
+  httpPort: 9002
 
 # Virtual service configuration
 virtualService:

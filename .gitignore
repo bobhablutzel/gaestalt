@@ -12,3 +12,7 @@
 # Temporary files
 *.tmp
 *.swp
+
+# Test environment (contains credentials)
+test-data/.env
+test-data/setup.log

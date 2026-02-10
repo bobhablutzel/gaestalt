@@ -39,10 +39,10 @@ public class GrpcLoadTest {
     private static final List<Long> sampleContactIds = new CopyOnWriteArrayList<>();
     private static final List<String> samplePhoneNumbers = new CopyOnWriteArrayList<>();
     private static final Set<String> sampleLastNames = ConcurrentHashMap.newKeySet();
-    private static final List<Long> samplePlanIds = new CopyOnWriteArrayList<>();
+    private static final List<String> sampleContractIds = new CopyOnWriteArrayList<>();
 
-    // Mapping from CSV contract_id to database plan_id (populated in Phase 1)
-    private static final Map<Integer, Long> contractToPlanId = new ConcurrentHashMap<>();
+    // Mapping from CSV contract_id to database contract UUID (populated in Phase 1)
+    private static final Map<Integer, String> csvContractToDbContractId = new ConcurrentHashMap<>();
     // Mapping from contact_id to CSV contract_id (populated during seeding for sampled contacts)
     private static final ConcurrentHashMap<Long, Integer> contactContractMap = new ConcurrentHashMap<>();
 
@@ -93,11 +93,11 @@ public class GrpcLoadTest {
             System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
             sampleExistingData(host, port);
         } else {
-            // Phase 1: Create test plans
+            // Phase 1: Create test contracts
             System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-            System.out.println("  Phase 1: Creating test plans");
+            System.out.println("  Phase 1: Creating test contracts");
             System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-            createTestPlans(host, port, csvPath);
+            createTestContracts(host, port, csvPath);
 
             // Phase 2: Seed contacts from CSV
             System.out.println();
@@ -106,16 +106,16 @@ public class GrpcLoadTest {
             System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
             seedContactsFromCsv(host, port, csvPath, seedingChannels, seedBatchSize);
 
-            // Phase 3: Assign plans to sample contacts
+            // Phase 3: Assign contracts to sample contacts
             System.out.println();
             System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-            System.out.println("  Phase 3: Assigning plans to contacts");
+            System.out.println("  Phase 3: Assigning contracts to contacts");
             System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-            assignPlansToContacts(host, port);
+            assignContractsToContacts(host, port);
         }
 
-        System.out.printf("%n  Collected samples: %d contact IDs, %d phone numbers, %d last names, %d plan IDs%n",
-                sampleContactIds.size(), samplePhoneNumbers.size(), sampleLastNames.size(), samplePlanIds.size());
+        System.out.printf("%n  Collected samples: %d contact IDs, %d phone numbers, %d last names, %d contract IDs%n",
+                sampleContactIds.size(), samplePhoneNumbers.size(), sampleLastNames.size(), sampleContractIds.size());
 
         if (sampleContactIds.isEmpty()) {
             throw new RuntimeException("No contact IDs collected — is the database populated?");
@@ -151,13 +151,13 @@ public class GrpcLoadTest {
                 new TestOperation("GetContactById", stubs, GrpcLoadTest::testGetContactById)
         ));
 
-        if (!samplePlanIds.isEmpty()) {
-            operations.add(new TestOperation("GetPlans", stubs, GrpcLoadTest::testGetPlans));
-            operations.add(new TestOperation("GetPlan", stubs, GrpcLoadTest::testGetPlan));
-            operations.add(new TestOperation("GetContactPlans", stubs, GrpcLoadTest::testGetContactPlans));
-            operations.add(new TestOperation("GetCurrentContactPlan", stubs, GrpcLoadTest::testGetCurrentContactPlan));
+        if (!sampleContractIds.isEmpty()) {
+            operations.add(new TestOperation("GetContracts", stubs, GrpcLoadTest::testGetContracts));
+            operations.add(new TestOperation("GetContract", stubs, GrpcLoadTest::testGetContract));
+            operations.add(new TestOperation("GetContactContracts", stubs, GrpcLoadTest::testGetContactContracts));
+            operations.add(new TestOperation("GetCurrentContactContract", stubs, GrpcLoadTest::testGetCurrentContactContract));
         } else {
-            System.out.println("\n  Skipping plan-related tests (no plans found)");
+            System.out.println("\n  Skipping contract-related tests (no contracts found)");
         }
 
         for (TestOperation op : operations) {
@@ -240,27 +240,27 @@ public class GrpcLoadTest {
             }
             System.out.printf("  Collected %d phone numbers%n", samplePhoneNumbers.size());
 
-            // Fetch existing plans
-            System.out.println("  Sampling plans via GetPlans...");
+            // Fetch existing contracts
+            System.out.println("  Sampling contracts via GetContracts...");
             try {
-                GetPlansResponse plans = stub.getPlans(GetPlansRequest.newBuilder().build());
-                for (PlanEntry plan : plans.getPlansList()) {
-                    samplePlanIds.add(plan.getPlanId());
+                GetContractsResponse contracts = stub.getContracts(GetContractsRequest.newBuilder().build());
+                for (ContractEntry contract : contracts.getContractsList()) {
+                    sampleContractIds.add(contract.getContractId());
                 }
-                System.out.printf("  Collected %d plan IDs%n", samplePlanIds.size());
+                System.out.printf("  Collected %d contract IDs%n", sampleContractIds.size());
             } catch (Exception e) {
-                System.out.println("  Warning: could not fetch plans: " + e.getMessage());
+                System.out.println("  Warning: could not fetch contracts: " + e.getMessage());
             }
         } finally {
             channel.shutdownNow();
         }
     }
 
-    // ─── Phase 1: Scan CSV for contracts and create plans ──────────────────────
+    // ─── Phase 1: Scan CSV for contracts and create contracts ──────────────────
 
     record CsvContract(int contractId, String companyName, String contractName) {}
 
-    private static void createTestPlans(String host, int port, String csvPath) throws IOException {
+    private static void createTestContracts(String host, int port, String csvPath) throws IOException {
         // Read contracts from companies_and_contracts.csv (same directory as the main CSV)
         String contractsCsvPath = csvPath.substring(0, csvPath.lastIndexOf('/') + 1)
                 + "companies_and_contracts.csv";
@@ -277,26 +277,28 @@ public class GrpcLoadTest {
         }
         System.out.printf("  Loaded %d contracts from %s%n", contracts.size(), contractsCsvPath);
 
-        // Create plans via gRPC
+        // Create contracts via gRPC
         ManagedChannel channel = ManagedChannelBuilder.forAddress(host, port)
                 .usePlaintext()
                 .build();
         try {
             ContactServiceGrpc.ContactServiceBlockingStub stub = ContactServiceGrpc.newBlockingStub(channel);
 
+            // Generate a deterministic company UUID from the company name
             int created = 0;
             for (CsvContract contract : contracts) {
-                CreatePlanResponse response = stub.createPlan(CreatePlanRequest.newBuilder()
-                        .setPlanName(contract.contractName())
-                        .setCarrierId(contract.contractId())
-                        .setCarrierName(contract.companyName())
+                UUID companyId = UUID.nameUUIDFromBytes(contract.companyName().getBytes());
+                CreateContractResponse response = stub.createContract(CreateContractRequest.newBuilder()
+                        .setContractName(contract.contractName())
+                        .setCompanyId(companyId.toString())
+                        .setCompanyName(contract.companyName())
                         .build());
-                long dbPlanId = response.getPlan().getPlanId();
-                contractToPlanId.put(contract.contractId(), dbPlanId);
-                samplePlanIds.add(dbPlanId);
+                String dbContractId = response.getContract().getContractId();
+                csvContractToDbContractId.put(contract.contractId(), dbContractId);
+                sampleContractIds.add(dbContractId);
                 created++;
                 if (created % 100 == 0 || created == contracts.size()) {
-                    System.out.printf("  Created %d / %d plans%n", created, contracts.size());
+                    System.out.printf("  Created %d / %d contracts%n", created, contracts.size());
                 }
             }
         } finally {
@@ -507,9 +509,9 @@ public class GrpcLoadTest {
         }
     }
 
-    // ─── Phase 3: Assign plans to contacts ──────────────────────────────────────
+    // ─── Phase 3: Assign contracts to contacts ──────────────────────────────────
 
-    private static void assignPlansToContacts(String host, int port) {
+    private static void assignContractsToContacts(String host, int port) {
         ManagedChannel channel = ManagedChannelBuilder.forAddress(host, port)
                 .usePlaintext()
                 .build();
@@ -533,16 +535,16 @@ public class GrpcLoadTest {
                     skipped++;
                     continue;
                 }
-                Long planId = contractToPlanId.get(csvContractId);
-                if (planId == null) {
+                String dbContractId = csvContractToDbContractId.get(csvContractId);
+                if (dbContractId == null) {
                     skipped++;
                     continue;
                 }
 
                 try {
-                    stub.addContactPlan(AddContactPlanRequest.newBuilder()
+                    stub.addContactContract(AddContactContractRequest.newBuilder()
                             .setContactId(contactId)
-                            .setPlanId(planId)
+                            .setContractId(dbContractId)
                             .setEffectiveDate(effectiveDate)
                             .setExpirationDate(expirationDate)
                             .build());
@@ -551,7 +553,7 @@ public class GrpcLoadTest {
                     // Some may fail if contact doesn't exist, that's fine
                 }
             }
-            System.out.printf("  Assigned plans to %d contacts (skipped %d with no contract mapping)%n",
+            System.out.printf("  Assigned contracts to %d contacts (skipped %d with no contract mapping)%n",
                     assigned, skipped);
         } finally {
             channel.shutdownNow();
@@ -686,23 +688,23 @@ public class GrpcLoadTest {
         stub.getContactById(GetContactByIdRequest.newBuilder().setContactId(contactId).build());
     }
 
-    private static void testGetPlans(ContactServiceGrpc.ContactServiceBlockingStub stub, Random random) {
-        stub.getPlans(GetPlansRequest.newBuilder().build());
+    private static void testGetContracts(ContactServiceGrpc.ContactServiceBlockingStub stub, Random random) {
+        stub.getContracts(GetContractsRequest.newBuilder().build());
     }
 
-    private static void testGetPlan(ContactServiceGrpc.ContactServiceBlockingStub stub, Random random) {
-        long planId = samplePlanIds.get(random.nextInt(samplePlanIds.size()));
-        stub.getPlan(GetPlanRequest.newBuilder().setPlanId(planId).build());
+    private static void testGetContract(ContactServiceGrpc.ContactServiceBlockingStub stub, Random random) {
+        String contractId = sampleContractIds.get(random.nextInt(sampleContractIds.size()));
+        stub.getContract(GetContractRequest.newBuilder().setContractId(contractId).build());
     }
 
-    private static void testGetContactPlans(ContactServiceGrpc.ContactServiceBlockingStub stub, Random random) {
+    private static void testGetContactContracts(ContactServiceGrpc.ContactServiceBlockingStub stub, Random random) {
         long contactId = sampleContactIds.get(random.nextInt(sampleContactIds.size()));
-        stub.getContactPlans(GetContactPlansRequest.newBuilder().setContactId(contactId).build());
+        stub.getContactContracts(GetContactContractsRequest.newBuilder().setContactId(contactId).build());
     }
 
-    private static void testGetCurrentContactPlan(ContactServiceGrpc.ContactServiceBlockingStub stub, Random random) {
+    private static void testGetCurrentContactContract(ContactServiceGrpc.ContactServiceBlockingStub stub, Random random) {
         long contactId = sampleContactIds.get(random.nextInt(sampleContactIds.size()));
-        stub.getCurrentContactPlan(GetCurrentContactPlanRequest.newBuilder().setContactId(contactId).build());
+        stub.getCurrentContactContract(GetCurrentContactContractRequest.newBuilder().setContactId(contactId).build());
     }
 
     // ─── Helper classes ─────────────────────────────────────────────────────────

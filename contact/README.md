@@ -157,21 +157,21 @@ grpcurl -plaintext -d '{"last_name": "smith", "max_results": 25}' \
 grpcurl -plaintext -d '{"contact_id": 123, "action_type": "GENERATE_EXTERNAL_IDENTIFIERS"}' \
   localhost:9001 com.geastalt.contact.grpc.ContactService/HasPendingAction
 
-# Create a plan
-grpcurl -plaintext -d '{"plan_name": "Gold Plan", "carrier_id": 1, "carrier_name": "Aetna"}' \
-  localhost:9001 com.geastalt.contact.grpc.ContactService/CreatePlan
+# Create a contract
+grpcurl -plaintext -d '{"contract_name": "Gold Plan", "company_id": "550e8400-e29b-41d4-a716-446655440000", "company_name": "Aetna"}' \
+  localhost:9001 com.geastalt.contact.grpc.ContactService/CreateContract
 
-# Get all plans
+# Get all contracts
 grpcurl -plaintext -d '{}' \
-  localhost:9001 com.geastalt.contact.grpc.ContactService/GetPlans
+  localhost:9001 com.geastalt.contact.grpc.ContactService/GetContracts
 
-# Add plan to contact (dates in ISO 8601 UTC)
-grpcurl -plaintext -d '{"contact_id": 11780449, "plan_id": 1, "effective_date": "2026-01-01T00:00:00Z", "expiration_date": "2026-12-31T23:59:59Z"}' \
-  localhost:9001 com.geastalt.contact.grpc.ContactService/AddContactPlan
+# Add contract to contact (dates in ISO 8601 UTC)
+grpcurl -plaintext -d '{"contact_id": 11780449, "contract_id": "550e8400-e29b-41d4-a716-446655440000", "effective_date": "2026-01-01T00:00:00Z", "expiration_date": "2026-12-31T23:59:59Z"}' \
+  localhost:9001 com.geastalt.contact.grpc.ContactService/AddContactContract
 
-# Get current plan for a contact
+# Get current contract for a contact
 grpcurl -plaintext -d '{"contact_id": 11780449}' \
-  localhost:9001 com.geastalt.contact.grpc.ContactService/GetCurrentContactPlan
+  localhost:9001 com.geastalt.contact.grpc.ContactService/GetCurrentContactContract
 ```
 
 ## Kubernetes Deployment
@@ -256,8 +256,8 @@ message CreateContactRequest {
   - `contact_addresses` - Contact address associations
   - `contact_emails` - Contact email addresses
   - `contact_phones` - Contact phone numbers
-  - `plans` - Plan lookup table (carrier/plan definitions)
-  - `contact_plans` - Contact-plan associations with effective/expiration dates
+  - `contracts` - Contract definitions (company/contract)
+  - `contact_contracts` - Contact-contract associations with effective/expiration dates
   - `standardized_addresses` - USPS-standardized addresses
 
 ## Technology Stack
@@ -271,3 +271,7 @@ message CreateContactRequest {
 - **Build**: Maven
 - **Containerization**: Docker
 - **Orchestration**: Kubernetes with Helm
+
+## TODO
+
+- [ ] Migrate Kafka from Zookeeper to KRaft mode (Kafka 3.3+ supports Zookeeper-free operation via KRaft consensus). Update `k8s/kafka.yaml`, `test-data/docker-compose.yml`, and Helm charts to remove Zookeeper dependency.

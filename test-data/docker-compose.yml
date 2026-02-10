@@ -1,0 +1,124 @@
+# Full-stack Docker Compose for test environment
+# Starts Kafka infrastructure + all application services
+#
+# Usage:
+#   docker compose up -d
+#   docker compose down -v
+#
+# Requires: test-data/.env with DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
+
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: test-zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    healthcheck:
+      test: ["CMD-SHELL", "echo ruok | nc localhost 2181 | grep imok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: test-kafka
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:29092
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+  contact-api:
+    build:
+      context: ../contact
+      dockerfile: contact-api/Dockerfile
+    container_name: test-contact-api
+    depends_on:
+      kafka:
+        condition: service_healthy
+    ports:
+      - "9001:9001"
+      - "9002:9002"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${DB_HOST:-192.168.1.17}:${DB_PORT:-5432}/${DB_NAME:-contact}
+      SPRING_DATASOURCE_USERNAME: ${DB_USER:-bob}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-}
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      GRPC_SERVER_PORT: 9001
+      SERVER_PORT: 9002
+      JAVA_OPTS: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -XX:+UseContainerSupport"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9002/actuator/health/liveness || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 45s
+
+  contact-consumer-ids:
+    build:
+      context: ../contact
+      dockerfile: contact-consumer-ids/Dockerfile
+    container_name: test-contact-consumer-ids
+    depends_on:
+      kafka:
+        condition: service_healthy
+    ports:
+      - "9010:9010"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${DB_HOST:-192.168.1.17}:${DB_PORT:-5432}/${DB_NAME:-contact}
+      SPRING_DATASOURCE_USERNAME: ${DB_USER:-bob}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-}
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SERVER_PORT: 9010
+      JAVA_OPTS: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -XX:+UseContainerSupport"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9010/actuator/health/liveness || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 45s
+
+  address:
+    build:
+      context: ../address
+      dockerfile: Dockerfile
+    container_name: test-address
+    depends_on:
+      kafka:
+        condition: service_healthy
+    ports:
+      - "9011:9011"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${DB_HOST:-192.168.1.17}:${DB_PORT:-5432}/${DB_NAME:-contact}
+      SPRING_DATASOURCE_USERNAME: ${DB_USER:-bob}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-}
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SERVER_PORT: 9011
+      JAVA_OPTS: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -XX:+UseContainerSupport"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9011/actuator/health/liveness || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 45s

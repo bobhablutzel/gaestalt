@@ -11,7 +11,6 @@ COPY pom.xml .
 COPY contact-common/pom.xml contact-common/
 COPY contact-api/pom.xml contact-api/
 COPY contact-consumer-ids/pom.xml contact-consumer-ids/
-COPY contact-consumer-address/pom.xml contact-consumer-address/
 
 # Copy source code
 COPY contact-common/src contact-common/src

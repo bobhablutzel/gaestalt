@@ -95,7 +95,7 @@ public class BulkContactService {
         ContactPartitionContext partitionContext = new ContactPartitionContext(
                 input.getFirstName(),
                 input.getLastName(),
-                input.getCarrierName());
+                input.getCompanyName());
         int partitionNumber = partitionAssignmentService.assignPartition(partitionContext);
 
         // Insert contact and get generated ID

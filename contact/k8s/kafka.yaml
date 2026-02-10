@@ -80,6 +80,9 @@ spec:
       containers:
         - name: kafka
           image: confluentinc/cp-kafka:7.5.0
+          # Unset KAFKA_PORT* injected by K8s service discovery — the Confluent
+          # configure script treats KAFKA_PORT as a deprecated config and exits.
+          command: ["sh", "-c", "unset ${!KAFKA_PORT*} && /etc/confluent/docker/run"]
           ports:
             - containerPort: 9092
           env:
