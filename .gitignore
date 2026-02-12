@@ -22,3 +22,6 @@
 # Test environment (contains credentials)
 test-data/.env
 test-data/setup.log
+
+# Istio downloads (setup.sh fetches these on demand)
+test-data/istio-*/
