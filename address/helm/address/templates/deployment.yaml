@@ -46,6 +46,20 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.secretName }}
                   key: USPS_CLIENT_SECRET
+            - name: SMARTY_AUTH_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secretName }}
+                  key: SMARTY_AUTH_ID
+            - name: SMARTY_AUTH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secretName }}
+                  key: SMARTY_AUTH_TOKEN
+            - name: SMARTY_US_STREET_BASE_URL
+              value: {{ .Values.smarty.usStreetBaseUrl | quote }}
+            - name: SMARTY_INTERNATIONAL_BASE_URL
+              value: {{ .Values.smarty.internationalBaseUrl | quote }}
           livenessProbe:
             httpGet:
               path: /actuator/health/liveness

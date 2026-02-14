@@ -8,168 +8,152 @@
 
 package com.geastalt.address.format.ca;
 
+import com.geastalt.address.CountryCode;
 import com.geastalt.address.format.FormatVerificationResult;
 import com.geastalt.address.format.FormatVerificationResult.FormatIssueItem;
 import com.geastalt.address.format.FormatVerificationResult.Severity;
 import com.geastalt.address.format.FormatVerifier;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
 
+
+/**
+ * Defines a FormatVerifier specialized for Canada (ISO 3166-1 country code 126).
+ * This validates and cleans up the postal code and validates the presence or
+ * absence of key line items
+ */
 @Component
 public class CaFormatVerifier implements FormatVerifier {
 
-    private static final Pattern POSTAL_CODE = Pattern.compile("^[A-Z]\\d[A-Z] \\d[A-Z]\\d$");
-    private static final Pattern POSTAL_CODE_NO_SPACE = Pattern.compile("^[A-Z]\\d[A-Z]\\d[A-Z]\\d$");
+    /**
+     * Defines the postal code pattern. There is an optional space that
+     * will be introduced if missing.
+     */
+    private static final Pattern POSTAL_CODE = Pattern.compile("^([A-Z][0-9][A-Z]) ?([0-9][A-Z][0-9])$");
 
+    /**
+     * List of valid province codes
+     */
     private static final Set<String> VALID_PROVINCE_CODES = Set.of(
             "AB", "BC", "MB", "NB", "NL", "NS", "NT", "NU", "ON", "PE", "QC", "SK", "YT"
     );
 
+    /**
+     * Providers the country code for the formatter.
+     */
     @Override
-    public String getCountryCode() {
-        return "CA";
+    public int getCountryCode() {
+        return CountryCode.CA;
     }
 
+
+    /** {@inheritDoc} */
     @Override
-    public FormatVerificationResult verify(String countryCode,
-                                           List<String> addressLines,
-                                           String locality,
-                                           String administrativeArea,
-                                           String postalCode,
-                                           String subLocality,
-                                           String sortingCode) {
-        List<FormatIssueItem> issues = new ArrayList<>();
-        boolean hasErrors = false;
-        boolean hasCorrected = false;
+    public FormatVerificationResult verify(final int countryCode,
+                                           final List<String> addressLines,
+                                           final String locality,
+                                           final String administrativeArea,
+                                           final String postalCode,
+                                           final String subLocality) {
 
-        String correctedPostalCode = postalCode;
-        String correctedAdminArea = administrativeArea;
+        final var result = new FormatVerificationResult(countryCode, addressLines, locality,
+                administrativeArea, postalCode, subLocality);
 
-        // Required fields
-        if (addressLines == null || addressLines.isEmpty()
-                || addressLines.stream().allMatch(l -> l == null || l.isBlank())) {
-            issues.add(FormatIssueItem.builder()
+        // Validate the required fields are present. Check here
+        // for at least one non-blank, non-null line
+        if (addressLines == null ||
+            addressLines.isEmpty() ||
+            addressLines.stream().allMatch(l -> l == null || l.isBlank())) {
+
+            // No non-blank, non-null lines, so add format issue that
+            // records the problem.
+            result.addIssue(FormatIssueItem.builder()
                     .field("address_lines")
                     .severity(Severity.ERROR)
-                    .message("At least one address line is required")
+                    .code(FormatIssueItem.CODE_FIELD_REQUIRED)
                     .originalValue("")
                     .correctedValue("")
                     .build());
-            hasErrors = true;
         }
 
         if (locality == null || locality.isBlank()) {
-            issues.add(FormatIssueItem.builder()
+            result.addIssue(FormatIssueItem.builder()
                     .field("locality")
                     .severity(Severity.ERROR)
-                    .message("City/locality is required")
+                    .code(FormatIssueItem.CODE_FIELD_REQUIRED)
                     .originalValue("")
                     .correctedValue("")
                     .build());
-            hasErrors = true;
         }
 
+        // Check the administrative area - Province in Canadian terms
         if (administrativeArea == null || administrativeArea.isBlank()) {
-            issues.add(FormatIssueItem.builder()
+            result.addIssue(FormatIssueItem.builder()
                     .field("administrative_area")
                     .severity(Severity.ERROR)
-                    .message("Province/territory is required")
+                    .code(FormatIssueItem.CODE_FIELD_REQUIRED)
                     .originalValue("")
                     .correctedValue("")
                     .build());
-            hasErrors = true;
         } else {
-            String upper = administrativeArea.toUpperCase().trim();
+            final var upper = administrativeArea.toUpperCase().trim();
             if (!VALID_PROVINCE_CODES.contains(upper)) {
-                issues.add(FormatIssueItem.builder()
+                result.addIssue(FormatIssueItem.builder()
                         .field("administrative_area")
                         .severity(Severity.ERROR)
-                        .message("Invalid Canadian province/territory code")
+                        .code(FormatIssueItem.CODE_FIELD_INVALID)
                         .originalValue(administrativeArea)
                         .correctedValue("")
                         .build());
-                hasErrors = true;
             } else if (!upper.equals(administrativeArea)) {
-                correctedAdminArea = upper;
-                issues.add(FormatIssueItem.builder()
+                result.setAdministrativeArea(upper);
+                result.addIssue(FormatIssueItem.builder()
                         .field("administrative_area")
                         .severity(Severity.INFO)
-                        .message("Province code normalized to uppercase")
+                        .code(FormatIssueItem.CODE_FIELD_CORRECTED)
                         .originalValue(administrativeArea)
                         .correctedValue(upper)
                         .build());
-                hasCorrected = true;
             }
         }
 
+        // Validate the postal code. 
         if (postalCode == null || postalCode.isBlank()) {
-            issues.add(FormatIssueItem.builder()
+            result.addIssue(FormatIssueItem.builder()
                     .field("postal_code")
                     .severity(Severity.ERROR)
-                    .message("Postal code is required")
+                    .code(FormatIssueItem.CODE_FIELD_REQUIRED)
                     .originalValue("")
                     .correctedValue("")
                     .build());
-            hasErrors = true;
         } else {
-            String upper = postalCode.toUpperCase().trim();
-            if (POSTAL_CODE_NO_SPACE.matcher(upper).matches()) {
-                correctedPostalCode = upper.substring(0, 3) + " " + upper.substring(3);
-                issues.add(FormatIssueItem.builder()
-                        .field("postal_code")
-                        .severity(Severity.INFO)
-                        .message("Postal code formatted with space")
-                        .originalValue(postalCode)
-                        .correctedValue(correctedPostalCode)
-                        .build());
-                hasCorrected = true;
-            } else if (POSTAL_CODE.matcher(upper).matches()) {
-                if (!upper.equals(postalCode)) {
-                    correctedPostalCode = upper;
-                    issues.add(FormatIssueItem.builder()
+            final var matcher = POSTAL_CODE.matcher(postalCode.toUpperCase().trim());
+            if (matcher.matches()) {
+                final var rebuilt = matcher.group(1) + " " + matcher.group(2);
+                if (!rebuilt.equals(postalCode)) {
+                    result.setPostalCode(rebuilt);
+                    result.addIssue(FormatIssueItem.builder()
                             .field("postal_code")
                             .severity(Severity.INFO)
-                            .message("Postal code normalized to uppercase")
+                            .code(FormatIssueItem.CODE_FIELD_CORRECTED)
                             .originalValue(postalCode)
-                            .correctedValue(upper)
+                            .correctedValue(rebuilt)
                             .build());
-                    hasCorrected = true;
                 }
             } else {
-                issues.add(FormatIssueItem.builder()
+                result.addIssue(FormatIssueItem.builder()
                         .field("postal_code")
                         .severity(Severity.ERROR)
-                        .message("Invalid Canadian postal code format (expected A9A 9A9)")
+                        .code(FormatIssueItem.CODE_FIELD_INVALID)
                         .originalValue(postalCode)
                         .correctedValue("")
                         .build());
-                hasErrors = true;
             }
         }
 
-        FormatVerificationResult.Status status;
-        if (hasErrors) {
-            status = FormatVerificationResult.Status.INVALID;
-        } else if (hasCorrected) {
-            status = FormatVerificationResult.Status.CORRECTED;
-        } else {
-            status = FormatVerificationResult.Status.VALID;
-        }
-
-        return FormatVerificationResult.builder()
-                .status(status)
-                .countryCode("CA")
-                .addressLines(addressLines)
-                .locality(locality)
-                .administrativeArea(correctedAdminArea)
-                .postalCode(correctedPostalCode)
-                .subLocality(subLocality)
-                .sortingCode(sortingCode)
-                .issues(issues)
-                .build();
+        return result;
     }
 }

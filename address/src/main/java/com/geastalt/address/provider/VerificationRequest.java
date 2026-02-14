@@ -15,15 +15,14 @@ import java.util.List;
 
 @Data
 @Builder
-public class ValidationRequest {
+public class VerificationRequest {
 
-    private String countryCode;
+    private int countryCode;
     private List<String> addressLines;
     private String locality;
     private String administrativeArea;
     private String postalCode;
     private String subLocality;
-    private String sortingCode;
     private String organization;
     private String recipient;
 }

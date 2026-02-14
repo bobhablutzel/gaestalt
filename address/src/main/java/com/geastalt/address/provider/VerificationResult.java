@@ -16,23 +16,24 @@ import java.util.Map;
 
 @Data
 @Builder
-public class ValidationResult {
+public class VerificationResult {
 
     public enum Status {
-        VALIDATED,
-        VALIDATED_WITH_CORRECTIONS,
+        VERIFIED,
+        VERIFIED_WITH_CORRECTIONS,
         INVALID,
         PROVIDER_ERROR
     }
 
     private Status status;
-    private String countryCode;
+    private int countryCode;
     private List<String> addressLines;
     private String locality;
     private String administrativeArea;
     private String postalCode;
     private String subLocality;
-    private String sortingCode;
     private String message;
+    private Double latitude;
+    private Double longitude;
     private Map<String, String> metadata;
 }

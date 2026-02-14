@@ -6,19 +6,13 @@
  * Contact license@geastalt.com for commercial licensing.
  */
 
-package com.geastalt.address.provider;
+package com.geastalt.address.provider.routing;
 
 import java.util.List;
+import com.geastalt.address.provider.VerificationProvider;
 
-public interface ValidationProvider {
-
-    String getProviderId();
-
-    String getDisplayName();
-
-    List<String> getSupportedCountries();
-
-    boolean isEnabled();
-
-    ValidationResult validate(ValidationRequest request);
+public final class NullLoadBalancerStrategy implements ProviderLoadBalancerStrategy {
+    public List<VerificationProvider> getProviderList() {
+        return List.of();
+    }
 }

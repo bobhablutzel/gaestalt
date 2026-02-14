@@ -33,6 +33,19 @@ management:
       enabled: true
     readinessState:
       enabled: true
+  tracing:
+    sampling:
+      probability: ${TRACING_SAMPLE_RATE:0.01}
+    enabled: ${TRACING_ENABLED:true}
+
+otel:
+  exporter:
+    otlp:
+      endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT:http://jaeger:4317}
+  service:
+    name: ${spring.application.name}
+  traces:
+    exporter: otlp
 
 # USPS configuration
 usps:
@@ -43,7 +56,24 @@ usps:
     token-path: /oauth2/v3/token
     grant-type: client_credentials
 
-# Provider defaults by country code
+# Smarty configuration
+smarty:
+  auth-id: ${SMARTY_AUTH_ID:}
+  auth-token: ${SMARTY_AUTH_TOKEN:}
+  us-street-base-url: ${SMARTY_US_STREET_BASE_URL:https://us-street.api.smarty.com}
+  international-base-url: ${SMARTY_INTERNATIONAL_BASE_URL:https://international-street.api.smarty.com}
+
+# Provider routing by country code
 address:
   providers:
-    defaults: "{US: usps}"
+    routing-configuration:
+      840:
+        strategy: round_robin
+        specification: usps,smarty
+      124:
+        provider: smarty
+      826:
+        provider: smarty
+  tracing:
+    grpc:
+      enabled: ${ADDRESS_TRACING_GRPC_ENABLED:true}

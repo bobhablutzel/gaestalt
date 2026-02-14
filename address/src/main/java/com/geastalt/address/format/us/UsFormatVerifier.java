@@ -8,13 +8,13 @@
 
 package com.geastalt.address.format.us;
 
+import com.geastalt.address.CountryCode;
 import com.geastalt.address.format.FormatVerificationResult;
 import com.geastalt.address.format.FormatVerificationResult.FormatIssueItem;
 import com.geastalt.address.format.FormatVerificationResult.Severity;
 import com.geastalt.address.format.FormatVerifier;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -22,9 +22,8 @@ import java.util.regex.Pattern;
 @Component
 public class UsFormatVerifier implements FormatVerifier {
 
-    private static final Pattern ZIP5 = Pattern.compile("^\\d{5}$");
-    private static final Pattern ZIP5_PLUS4 = Pattern.compile("^\\d{5}-\\d{4}$");
-    private static final Pattern ZIP9_NO_DASH = Pattern.compile("^\\d{9}$");
+    // US ZIP code: 5 digits, optionally followed by dash and 4 more digits
+    private static final Pattern ZIP_CODE = Pattern.compile("^(\\d{5})(?:-?(\\d{4}))?$");
 
     private static final Set<String> VALID_STATE_CODES = Set.of(
             "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA",
@@ -32,138 +31,112 @@ public class UsFormatVerifier implements FormatVerifier {
             "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ",
             "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC",
             "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY",
-            "DC", "PR", "GU", "VI", "AS", "MP"
+            "DC", "PR", "GU", "VI", "AS", "MP", "UM"
     );
 
     @Override
-    public String getCountryCode() {
-        return "US";
+    public int getCountryCode() {
+        return CountryCode.US;
     }
 
+    /** {@inheritDoc} */
     @Override
-    public FormatVerificationResult verify(String countryCode,
-                                           List<String> addressLines,
-                                           String locality,
-                                           String administrativeArea,
-                                           String postalCode,
-                                           String subLocality,
-                                           String sortingCode) {
-        List<FormatIssueItem> issues = new ArrayList<>();
-        boolean hasErrors = false;
-        boolean hasCorrected = false;
-
-        String correctedPostalCode = postalCode;
-        String correctedAdminArea = administrativeArea;
+    public FormatVerificationResult verify(final int countryCode,
+                                           final List<String> addressLines,
+                                           final String locality,
+                                           final String administrativeArea,
+                                           final String postalCode,
+                                           final String subLocality) {
+        final var result = new FormatVerificationResult(countryCode, addressLines, locality,
+                administrativeArea, postalCode, subLocality);
 
         // Required fields
         if (addressLines == null || addressLines.isEmpty()
                 || addressLines.stream().allMatch(l -> l == null || l.isBlank())) {
-            issues.add(FormatIssueItem.builder()
+            result.addIssue(FormatIssueItem.builder()
                     .field("address_lines")
                     .severity(Severity.ERROR)
-                    .message("At least one address line is required")
+                    .code(FormatIssueItem.CODE_FIELD_REQUIRED)
                     .originalValue("")
                     .correctedValue("")
                     .build());
-            hasErrors = true;
         }
 
         if (locality == null || locality.isBlank()) {
-            issues.add(FormatIssueItem.builder()
+            result.addIssue(FormatIssueItem.builder()
                     .field("locality")
                     .severity(Severity.ERROR)
-                    .message("City/locality is required")
+                    .code(FormatIssueItem.CODE_FIELD_REQUIRED)
                     .originalValue("")
                     .correctedValue("")
                     .build());
-            hasErrors = true;
         }
 
         if (administrativeArea == null || administrativeArea.isBlank()) {
-            issues.add(FormatIssueItem.builder()
+            result.addIssue(FormatIssueItem.builder()
                     .field("administrative_area")
                     .severity(Severity.ERROR)
-                    .message("State is required")
+                    .code(FormatIssueItem.CODE_FIELD_REQUIRED)
                     .originalValue("")
                     .correctedValue("")
                     .build());
-            hasErrors = true;
         } else {
-            String upper = administrativeArea.toUpperCase().trim();
+            final var upper = administrativeArea.toUpperCase().trim();
             if (!VALID_STATE_CODES.contains(upper)) {
-                issues.add(FormatIssueItem.builder()
+                result.addIssue(FormatIssueItem.builder()
                         .field("administrative_area")
                         .severity(Severity.ERROR)
-                        .message("Invalid US state/territory code")
+                        .code(FormatIssueItem.CODE_FIELD_INVALID)
                         .originalValue(administrativeArea)
                         .correctedValue("")
                         .build());
-                hasErrors = true;
             } else if (!upper.equals(administrativeArea)) {
-                correctedAdminArea = upper;
-                issues.add(FormatIssueItem.builder()
+                result.setAdministrativeArea(upper);
+                result.addIssue(FormatIssueItem.builder()
                         .field("administrative_area")
                         .severity(Severity.INFO)
-                        .message("State code normalized to uppercase")
+                        .code(FormatIssueItem.CODE_FIELD_CORRECTED)
                         .originalValue(administrativeArea)
                         .correctedValue(upper)
                         .build());
-                hasCorrected = true;
             }
         }
 
         if (postalCode == null || postalCode.isBlank()) {
-            issues.add(FormatIssueItem.builder()
+            result.addIssue(FormatIssueItem.builder()
                     .field("postal_code")
                     .severity(Severity.ERROR)
-                    .message("ZIP code is required")
+                    .code(FormatIssueItem.CODE_FIELD_REQUIRED)
                     .originalValue("")
                     .correctedValue("")
                     .build());
-            hasErrors = true;
         } else {
-            String trimmed = postalCode.trim();
-            if (ZIP9_NO_DASH.matcher(trimmed).matches()) {
-                correctedPostalCode = trimmed.substring(0, 5) + "-" + trimmed.substring(5);
-                issues.add(FormatIssueItem.builder()
-                        .field("postal_code")
-                        .severity(Severity.INFO)
-                        .message("ZIP+4 formatted with dash")
-                        .originalValue(postalCode)
-                        .correctedValue(correctedPostalCode)
-                        .build());
-                hasCorrected = true;
-            } else if (!ZIP5.matcher(trimmed).matches() && !ZIP5_PLUS4.matcher(trimmed).matches()) {
-                issues.add(FormatIssueItem.builder()
+            final var matcher = ZIP_CODE.matcher(postalCode.trim());
+            if (matcher.matches()) {
+                final var rebuilt = matcher.group(2) != null
+                        ? matcher.group(1) + "-" + matcher.group(2)
+                        : matcher.group(1);
+                if (!rebuilt.equals(postalCode)) {
+                    result.setPostalCode(rebuilt);
+                    result.addIssue(FormatIssueItem.builder()
+                            .field("postal_code")
+                            .severity(Severity.INFO)
+                            .code(FormatIssueItem.CODE_FIELD_CORRECTED)
+                            .originalValue(postalCode)
+                            .correctedValue(rebuilt)
+                            .build());
+                }
+            } else {
+                result.addIssue(FormatIssueItem.builder()
                         .field("postal_code")
                         .severity(Severity.ERROR)
-                        .message("Invalid ZIP code format (expected 12345 or 12345-6789)")
+                        .code(FormatIssueItem.CODE_FIELD_INVALID)
                         .originalValue(postalCode)
                         .correctedValue("")
                         .build());
-                hasErrors = true;
             }
         }
 
-        FormatVerificationResult.Status status;
-        if (hasErrors) {
-            status = FormatVerificationResult.Status.INVALID;
-        } else if (hasCorrected) {
-            status = FormatVerificationResult.Status.CORRECTED;
-        } else {
-            status = FormatVerificationResult.Status.VALID;
-        }
-
-        return FormatVerificationResult.builder()
-                .status(status)
-                .countryCode("US")
-                .addressLines(addressLines)
-                .locality(locality)
-                .administrativeArea(correctedAdminArea)
-                .postalCode(correctedPostalCode)
-                .subLocality(subLocality)
-                .sortingCode(sortingCode)
-                .issues(issues)
-                .build();
+        return result;
     }
 }

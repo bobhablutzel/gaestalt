@@ -8,9 +8,13 @@
 
 package com.geastalt.address.provider.usps;
 
-import com.geastalt.address.provider.ValidationProvider;
-import com.geastalt.address.provider.ValidationRequest;
-import com.geastalt.address.provider.ValidationResult;
+import com.geastalt.address.CountryCode;
+import com.geastalt.address.provider.VerificationProvider;
+import com.geastalt.address.provider.VerificationRequest;
+import com.geastalt.address.provider.VerificationResult;
+import io.opentelemetry.api.common.AttributeKey;
+import io.opentelemetry.api.trace.StatusCode;
+import io.opentelemetry.api.trace.Tracer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatusCode;
@@ -26,13 +30,14 @@ import java.util.Map;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class UspsValidationProvider implements ValidationProvider {
+public class UspsValidationProvider implements VerificationProvider {
 
     private static final String ADDRESS_PATH = "/addresses/v3/address";
 
     private final UspsConfig uspsConfig;
     private final UspsOAuthService oAuthService;
     private final RestClient.Builder restClientBuilder;
+    private final Tracer tracer;
 
     @Override
     public String getProviderId() {
@@ -41,12 +46,12 @@ public class UspsValidationProvider implements ValidationProvider {
 
     @Override
     public String getDisplayName() {
-        return "USPS Address Validation API";
+        return "USPS Address Verification API";
     }
 
     @Override
-    public List<String> getSupportedCountries() {
-        return List.of("US");
+    public List<Integer> getSupportedCountries() {
+        return List.of(CountryCode.US);
     }
 
     @Override
@@ -55,26 +60,26 @@ public class UspsValidationProvider implements ValidationProvider {
     }
 
     @Override
-    public ValidationResult validate(ValidationRequest request) {
-        UspsAddressRequest uspsRequest = mapToUspsRequest(request);
+    public VerificationResult verify(final VerificationRequest request) {
+        final var uspsRequest = mapToUspsRequest(request);
 
         try {
-            UspsAddressResponse uspsResponse = callUspsApi(uspsRequest);
+            final var uspsResponse = callUspsApi(uspsRequest);
             return mapFromUspsResponse(request, uspsResponse);
         } catch (Exception e) {
-            log.error("USPS validation failed: {}", e.getMessage(), e);
-            return ValidationResult.builder()
-                    .status(ValidationResult.Status.PROVIDER_ERROR)
+            log.error("USPS verification failed: {}", e.getMessage(), e);
+            return VerificationResult.builder()
+                    .status(VerificationResult.Status.PROVIDER_ERROR)
                     .message("USPS API error: " + e.getMessage())
                     .metadata(Map.of())
                     .build();
         }
     }
 
-    private UspsAddressRequest mapToUspsRequest(ValidationRequest request) {
-        List<String> lines = request.getAddressLines() != null ? request.getAddressLines() : List.of();
+    private UspsAddressRequest mapToUspsRequest(final VerificationRequest request) {
+        final var lines = request.getAddressLines() != null ? request.getAddressLines() : List.<String>of();
         return UspsAddressRequest.builder()
-                .streetAddress(lines.size() > 0 ? lines.get(0) : null)
+                .streetAddress(!lines.isEmpty() ? lines.get(0) : null)
                 .secondaryAddress(lines.size() > 1 ? lines.get(1) : null)
                 .city(request.getLocality())
                 .state(request.getAdministrativeArea())
@@ -82,19 +87,19 @@ public class UspsValidationProvider implements ValidationProvider {
                 .build();
     }
 
-    private ValidationResult mapFromUspsResponse(ValidationRequest originalRequest,
-                                                  UspsAddressResponse uspsResponse) {
+    private VerificationResult mapFromUspsResponse(final VerificationRequest originalRequest,
+                                                  final UspsAddressResponse uspsResponse) {
         if (uspsResponse == null || uspsResponse.getAddress() == null) {
-            return ValidationResult.builder()
-                    .status(ValidationResult.Status.INVALID)
+            return VerificationResult.builder()
+                    .status(VerificationResult.Status.INVALID)
                     .message("USPS returned no address data")
                     .metadata(Map.of())
                     .build();
         }
 
-        UspsAddressResponse.Address addr = uspsResponse.getAddress();
+        final var addr = uspsResponse.getAddress();
 
-        List<String> standardizedLines = new ArrayList<>();
+        final var standardizedLines = new ArrayList<String>();
         if (addr.getStreetAddress() != null && !addr.getStreetAddress().isEmpty()) {
             standardizedLines.add(addr.getStreetAddress());
         }
@@ -102,14 +107,14 @@ public class UspsValidationProvider implements ValidationProvider {
             standardizedLines.add(addr.getSecondaryAddress());
         }
 
-        String postalCode = joinPostalCode(addr.getZipCode(), addr.getZipPlus4());
+        final var postalCode = joinPostalCode(addr.getZipCode(), addr.getZipPlus4());
 
-        boolean hasCorrections = !addressLinesMatch(originalRequest.getAddressLines(), standardizedLines)
+        final var hasCorrections = !addressLinesMatch(originalRequest.getAddressLines(), standardizedLines)
                 || !equalsIgnoreCase(originalRequest.getLocality(), addr.getCity())
                 || !equalsIgnoreCase(originalRequest.getAdministrativeArea(), addr.getState())
                 || !equalsIgnoreCase(originalRequest.getPostalCode(), postalCode);
 
-        Map<String, String> metadata = new HashMap<>();
+        final var metadata = new HashMap<String, String>();
         if (uspsResponse.getDeliveryPoint() != null) {
             metadata.put("deliveryPoint", uspsResponse.getDeliveryPoint());
         }
@@ -129,10 +134,10 @@ public class UspsValidationProvider implements ValidationProvider {
             metadata.put("vacant", uspsResponse.getVacant());
         }
 
-        return ValidationResult.builder()
-                .status(hasCorrections ? ValidationResult.Status.VALIDATED_WITH_CORRECTIONS
-                        : ValidationResult.Status.VALIDATED)
-                .countryCode("US")
+        return VerificationResult.builder()
+                .status(hasCorrections ? VerificationResult.Status.VERIFIED_WITH_CORRECTIONS
+                        : VerificationResult.Status.VERIFIED)
+                .countryCode(CountryCode.US)
                 .addressLines(standardizedLines)
                 .locality(addr.getCity())
                 .administrativeArea(addr.getState())
@@ -141,44 +146,59 @@ public class UspsValidationProvider implements ValidationProvider {
                 .build();
     }
 
-    private UspsAddressResponse callUspsApi(UspsAddressRequest request) {
-        String token = oAuthService.getAccessToken();
+    private UspsAddressResponse callUspsApi(final UspsAddressRequest request) {
+        final var uri = buildAddressUri(request);
+        final var span = tracer.spanBuilder("usps.address.verify")
+                .setAttribute(AttributeKey.stringKey("http.method"), "GET")
+                .setAttribute(AttributeKey.stringKey("http.url"), uri)
+                .startSpan();
+        try (final var scope = span.makeCurrent()) {
+            var token = oAuthService.getAccessToken();
 
-        RestClient restClient = restClientBuilder
-                .baseUrl(uspsConfig.getBaseUrl())
-                .build();
+            final var restClient = restClientBuilder
+                    .baseUrl(uspsConfig.getBaseUrl())
+                    .build();
 
-        String uri = buildAddressUri(request);
-
-        try {
-            return restClient.get()
-                    .uri(uri)
-                    .header("Authorization", "Bearer " + token)
-                    .retrieve()
-                    .onStatus(HttpStatusCode::is4xxClientError, (req, res) -> {
-                        if (res.getStatusCode().value() == 401) {
-                            log.warn("USPS OAuth token expired, invalidating cache");
-                            oAuthService.invalidateToken();
-                        }
-                        throw new RuntimeException("USPS API error: " + res.getStatusCode());
-                    })
-                    .body(UspsAddressResponse.class);
-        } catch (RuntimeException e) {
-            if (e.getMessage() != null && e.getMessage().contains("401")) {
-                log.info("Retrying with new token");
-                token = oAuthService.getAccessToken();
-                return restClient.get()
+            try {
+                final var response = restClient.get()
                         .uri(uri)
                         .header("Authorization", "Bearer " + token)
                         .retrieve()
+                        .onStatus(HttpStatusCode::is4xxClientError, (req, res) -> {
+                            if (res.getStatusCode().value() == 401) {
+                                log.warn("USPS OAuth token expired, invalidating cache");
+                                oAuthService.invalidateToken();
+                            }
+                            throw new RuntimeException("USPS API error: " + res.getStatusCode());
+                        })
                         .body(UspsAddressResponse.class);
+                span.setStatus(StatusCode.OK);
+                return response;
+            } catch (RuntimeException e) {
+                if (e.getMessage() != null && e.getMessage().contains("401")) {
+                    log.info("Retrying with new token");
+                    token = oAuthService.getAccessToken();
+                    final var response = restClient.get()
+                            .uri(uri)
+                            .header("Authorization", "Bearer " + token)
+                            .retrieve()
+                            .body(UspsAddressResponse.class);
+                    span.setStatus(StatusCode.OK);
+                    return response;
+                }
+                throw e;
             }
+        } catch (Exception e) {
+            span.setStatus(StatusCode.ERROR, e.getMessage());
+            span.recordException(e);
             throw e;
+        } finally {
+            span.end();
         }
     }
 
-    private String buildAddressUri(UspsAddressRequest request) {
-        UriComponentsBuilder builder = UriComponentsBuilder.fromPath(ADDRESS_PATH);
+    private String buildAddressUri(final UspsAddressRequest request) {
+        final var builder = UriComponentsBuilder.fromPath(ADDRESS_PATH);
 
         if (request.getStreetAddress() != null) {
             builder.queryParam("streetAddress", request.getStreetAddress());
@@ -202,7 +222,7 @@ public class UspsValidationProvider implements ValidationProvider {
         return builder.build().toUriString();
     }
 
-    private String joinPostalCode(String zipCode, String zipPlus4) {
+    private String joinPostalCode(final String zipCode, final String zipPlus4) {
         if (zipCode == null) return null;
         if (zipPlus4 != null && !zipPlus4.isEmpty()) {
             return zipCode + "-" + zipPlus4;
@@ -210,17 +230,17 @@ public class UspsValidationProvider implements ValidationProvider {
         return zipCode;
     }
 
-    private boolean equalsIgnoreCase(String a, String b) {
+    private boolean equalsIgnoreCase(final String a, final String b) {
         if (a == null && b == null) return true;
         if (a == null || b == null) return false;
         return a.equalsIgnoreCase(b);
     }
 
-    private boolean addressLinesMatch(List<String> original, List<String> standardized) {
+    private boolean addressLinesMatch(final List<String> original, final List<String> standardized) {
         if (original == null && standardized == null) return true;
         if (original == null || standardized == null) return false;
         if (original.size() != standardized.size()) return false;
-        for (int i = 0; i < original.size(); i++) {
+        for (var i = 0; i < original.size(); i++) {
             if (!equalsIgnoreCase(original.get(i), standardized.get(i))) return false;
         }
         return true;

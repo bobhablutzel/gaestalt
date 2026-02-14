@@ -21,19 +21,19 @@ import java.util.stream.Collectors;
 @Component
 public class CountryFormatRegistry {
 
-    private final Map<String, FormatVerifier> verifiersByCountry;
+    private final Map<Integer, FormatVerifier> verifiersByCountry;
 
-    public CountryFormatRegistry(List<FormatVerifier> verifiers) {
+    public CountryFormatRegistry(final List<FormatVerifier> verifiers) {
         this.verifiersByCountry = verifiers.stream()
                 .collect(Collectors.toMap(FormatVerifier::getCountryCode, Function.identity()));
         log.info("Registered format verifiers for countries: {}", verifiersByCountry.keySet());
     }
 
-    public Optional<FormatVerifier> getVerifier(String countryCode) {
+    public Optional<FormatVerifier> getVerifier(final int countryCode) {
         return Optional.ofNullable(verifiersByCountry.get(countryCode));
     }
 
-    public boolean isSupported(String countryCode) {
+    public boolean isSupported(final int countryCode) {
         return verifiersByCountry.containsKey(countryCode);
     }
 }

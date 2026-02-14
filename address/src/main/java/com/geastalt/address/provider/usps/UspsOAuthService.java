@@ -8,6 +8,9 @@
 
 package com.geastalt.address.provider.usps;
 
+import io.opentelemetry.api.common.AttributeKey;
+import io.opentelemetry.api.trace.StatusCode;
+import io.opentelemetry.api.trace.Tracer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -24,6 +27,7 @@ public class UspsOAuthService {
 
     private final UspsConfig uspsConfig;
     private final RestClient.Builder restClientBuilder;
+    private final Tracer tracer;
 
     private String cachedToken;
     private Instant tokenExpiry;
@@ -40,10 +44,10 @@ public class UspsOAuthService {
             }
 
             log.info("Requesting new USPS OAuth token");
-            UspsOAuthTokenResponse response = requestNewToken();
+            final var response = requestNewToken();
 
             cachedToken = response.getAccessToken();
-            int expiresIn = Integer.parseInt(response.getExpiresIn());
+            final var expiresIn = Integer.parseInt(response.getExpiresIn());
             tokenExpiry = Instant.now().plusSeconds(expiresIn - TOKEN_EXPIRY_BUFFER_SECONDS);
 
             log.info("USPS OAuth token obtained, expires at: {}", tokenExpiry);
@@ -58,28 +62,40 @@ public class UspsOAuthService {
     }
 
     private UspsOAuthTokenResponse requestNewToken() {
-        RestClient restClient = restClientBuilder
-                .baseUrl(uspsConfig.getBaseUrl())
-                .build();
+        final var span = tracer.spanBuilder("usps.oauth.token")
+                .setAttribute(AttributeKey.stringKey("http.method"), "POST")
+                .startSpan();
+        try (final var scope = span.makeCurrent()) {
+            final var restClient = restClientBuilder
+                    .baseUrl(uspsConfig.getBaseUrl())
+                    .build();
 
-        UspsOAuthTokenRequest request = UspsOAuthTokenRequest.builder()
-                .clientId(uspsConfig.getClientId())
-                .clientSecret(uspsConfig.getClientSecret())
-                .grantType(uspsConfig.getOauth().getGrantType())
-                .build();
+            final var request = UspsOAuthTokenRequest.builder()
+                    .clientId(uspsConfig.getClientId())
+                    .clientSecret(uspsConfig.getClientSecret())
+                    .grantType(uspsConfig.getOauth().getGrantType())
+                    .build();
 
-        UspsOAuthTokenResponse response = restClient.post()
-                .uri(uspsConfig.getOauth().getTokenPath())
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(request)
-                .retrieve()
-                .body(UspsOAuthTokenResponse.class);
+            final var response = restClient.post()
+                    .uri(uspsConfig.getOauth().getTokenPath())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(request)
+                    .retrieve()
+                    .body(UspsOAuthTokenResponse.class);
 
-        if (response == null || response.getAccessToken() == null) {
-            throw new RuntimeException("Failed to obtain USPS OAuth token");
+            if (response == null || response.getAccessToken() == null) {
+                throw new RuntimeException("Failed to obtain USPS OAuth token");
+            }
+
+            span.setStatus(StatusCode.OK);
+            return response;
+        } catch (Exception e) {
+            span.setStatus(StatusCode.ERROR, e.getMessage());
+            span.recordException(e);
+            throw e;
+        } finally {
+            span.end();
         }
-
-        return response;
     }
 
     public void invalidateToken() {

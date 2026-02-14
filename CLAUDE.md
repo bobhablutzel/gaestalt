@@ -113,13 +113,14 @@ grpcurl -plaintext -d '{"last_name": "smith", "max_results": 25}' localhost:9001
 - Fixed N+1 query problem in search endpoints using batch fetching
 - Added GetContactById gRPC endpoint
 
-## Address Validation Service (address/)
+## Address Verification Service (address/)
 
 ### Architecture
-- Stateless gRPC validation facade (no database, no Kafka)
-- Accepts addresses, routes to validation providers (USPS, future providers), returns results
+- Stateless gRPC verification facade (no database, no Kafka)
+- Accepts addresses, routes to verification providers (USPS, Smarty), returns results
+- Provider routing engine: configurable per-country routing with count-based or percentage-based distribution and automatic fallback on provider error
 - Format verification for US, CA, GB addresses
-- International address model: locality, administrative_area, postal_code, country_code (ISO 3166-1 alpha-2)
+- International address model: locality, administrative_area, postal_code, country_code (ISO 3166-1 numeric: 840=US, 124=CA, 826=GB)
 - gRPC port: 9010, HTTP management port: 9011
 
 ### Building and Deploying
@@ -141,12 +142,12 @@ helm upgrade --install address helm/address -n address --create-namespace
 # List available services
 grpcurl -plaintext localhost:9010 list
 
-# Validate an address
-grpcurl -plaintext -d '{"address":{"country_code":"US","address_lines":["123 Main St"],"locality":"Springfield","administrative_area":"IL","postal_code":"62704"}}' \
-  localhost:9010 com.geastalt.address.grpc.AddressService/ValidateAddress
+# Verify an address (country_code is ISO 3166-1 numeric: 840=US, 124=CA, 826=GB)
+grpcurl -plaintext -d '{"address":{"country_code":840,"address_lines":["123 Main St"],"locality":"Springfield","administrative_area":"IL","postal_code":"62704"}}' \
+  localhost:9010 com.geastalt.address.grpc.AddressService/VerifyAddress
 
 # Verify address format
-grpcurl -plaintext -d '{"address":{"country_code":"US","address_lines":["123 Main St"],"locality":"Springfield","administrative_area":"IL","postal_code":"62704"}}' \
+grpcurl -plaintext -d '{"address":{"country_code":840,"address_lines":["123 Main St"],"locality":"Springfield","administrative_area":"IL","postal_code":"62704"}}' \
   localhost:9010 com.geastalt.address.grpc.AddressService/VerifyAddressFormat
 
 # List available providers
@@ -157,19 +158,34 @@ grpcurl -plaintext -d '{}' localhost:9010 com.geastalt.address.grpc.AddressServi
 - Proto definition: `address/src/main/proto/address_service.proto`
 - gRPC service: `address/src/main/java/com/geastalt/address/grpc/AddressGrpcService.java`
 - Provider registry: `address/src/main/java/com/geastalt/address/provider/ProviderRegistry.java`
+- Provider router: `address/src/main/java/com/geastalt/address/provider/routing/ProviderRouter.java`
 - USPS provider: `address/src/main/java/com/geastalt/address/provider/usps/UspsValidationProvider.java`
+- Smarty provider: `address/src/main/java/com/geastalt/address/provider/smarty/SmartyValidationProvider.java`
 - Format verifiers: `address/src/main/java/com/geastalt/address/format/`
 - Application config: `address/src/main/resources/application.yml`
 - Helm chart: `address/helm/address/`
 
+### Verification Providers
+- **USPS** (`usps`): US addresses only (country 840). Uses OAuth. Config prefix: `usps`
+- **Smarty** (`smarty`): US (840), CA (124), GB (826). Uses auth-id/auth-token query params. Config prefix: `smarty`
+  - US → Smarty US Street API; CA/GB → Smarty International Street API
+
+### Provider Routing
+- Configured in `address.providers.routing` (country code → ordered provider list)
+- Single provider per country: always uses that provider
+- Count-based distribution: `count` field cycles requests across providers (e.g., count=3/count=2 gives 60/40 split)
+- Percentage-based distribution: `percentage` field distributes by percentage (must sum to 100)
+- Automatic fallback: on PROVIDER_ERROR, tries next provider in the configured order
+
 ### gRPC Endpoints
-- ValidateAddress - validate/standardize an address using a provider (USPS for US)
+- VerifyAddress - verify/standardize an address using routed providers or explicit provider override
 - VerifyAddressFormat - verify address format (ZIP, state codes, postal codes) for US/CA/GB
-- GetProviders - list available validation providers and their supported countries
+- GetProviders - list available verification providers and their supported countries
 
 ### Password and credentials
 - Kubernetes secret: `address-secret`
   - USPS credentials: `USPS_CLIENT_ID`, `USPS_CLIENT_SECRET`
+  - Smarty credentials: `SMARTY_AUTH_ID`, `SMARTY_AUTH_TOKEN`
 
 ## Lock Manager (lock/)
 
@@ -226,3 +242,9 @@ grpcurl -plaintext -d '{"lock_id": "550e8400-e29b-41d4-a716-446655440000", "clie
 - AcquireLock - acquire a distributed lock with timeout and fencing token
 - ReleaseLock - release a previously acquired lock (requires matching fencing token)
 - CheckLock - query lock status (holder, TTL, fencing token)
+
+## Coding Standards
+- Variables should be defined as final wherever possible
+- Formal parameters should be defined as final wherever possible
+- Local variables should be defined as var wherever possible (inferred types)
+- Prefer streaming implementations over for loops

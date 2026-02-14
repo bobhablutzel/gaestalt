@@ -19,16 +19,30 @@ and address validation.
 | System | Description | Status |
 |--------|-------------|--------|
 | [contact](contact/) | Contact management service with gRPC/REST APIs and Kafka consumers | Active |
+| [partner](partner/) | Manages configuration values and attributes for partners | Future |
+| [address](address/) | Wrapper service for address validation services, supporting internation addresses and sophisticated usage based routing | Active |
+| [notification](notification/) | Wrapper service for notification services - email, sms | Future |
 | [lock](lock/) | Distributed lock manager with Raft consensus and cross-region quorum | Active |
 
 ## Structure
 
 ```
 geastalt/
-├── contact/           # Contact management system
+├── address/           # Address validation service
+│   ├── format/
+│   ├── format/ca
+│   ├── format/gb
+│   ├── format/us
+│   ├── grpc
+│   ├── provider
+│   ├── provider/routing
+│   ├── provider/smarty
+│   ├── provider/usps
+│   ├── service
+├── contact/           # Contact management service
 │   ├── contact-api/
 │   ├── contact-common/
-│   ├── async-generate-ffpe-id/
+│   ├── contact-consumer-ids/
 │   ├── contact-consumer-address/
 │   ├── helm/
 │   ├── k8s/
@@ -60,12 +74,12 @@ block
   app["Application Layer"]
   block:domainGroup:2
     columns 2
-    Contact Address Partner Contract
+    Contact Partner
   end
-  domain["Domain Layer"]
+  domain["Stateless Services"]
   block:foundGroup:2
     columns 2
-    Lock Notification 
+    Lock Address Notification 
   end
   foundation["Foundation Layer"]
   block:infraGroup:2
@@ -85,3 +99,16 @@ style app fill:#942,stroke:#333,color:#fff;
 style appGroup fill:#942,stroke:#333;
 style owner fill:#087,color:#000,stroke-width:0,font-size:70px;
 ```
+
+
+## TODO
+
+- [ ] Migrate Kafka from Zookeeper to KRaft mode (Kafka 3.3+ supports Zookeeper-free operation via KRaft consensus). Update `k8s/kafka.yaml`, `test-data/docker-compose.yml`, and Helm charts to remove Zookeeper dependency.
+- [x] contact-consumer-ids is a post-insert event processor. Standardize naming around these
+- [x] address-validation: move completely to address service. 
+- [ ] Add post-insert event processor for address validation in contact
+- [ ] finalize partitioning strategy in contact system
+- [x] move FeistelFPE to contact-consumer-ids
+- [ ] split OAuth capabilities out of address into common library
+- [ ] support additional address providers
+- [ ] build native address cleansing capability

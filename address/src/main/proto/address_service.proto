@@ -14,22 +14,22 @@ option java_multiple_files = true;
 option java_package = "com.geastalt.address.grpc.generated";
 option java_outer_classname = "AddressServiceProto";
 
-// Address validation and format verification service
+// Address verification and format verification service
 service AddressService {
-  // Validate an address against a provider (e.g. USPS)
-  rpc ValidateAddress(ValidateAddressRequest) returns (ValidateAddressResponse);
+  // Verify an address against a provider (e.g. USPS)
+  rpc VerifyAddress(VerifyAddressRequest) returns (VerifyAddressResponse);
 
   // Verify address format without calling an external provider
   rpc VerifyAddressFormat(VerifyAddressFormatRequest) returns (VerifyAddressFormatResponse);
 
-  // List available validation providers
+  // List available verification providers
   rpc GetProviders(GetProvidersRequest) returns (GetProvidersResponse);
 }
 
 // International postal address model
 message PostalAddress {
-  // ISO 3166-1 alpha-2 country code (e.g. "US", "CA", "GB")
-  string country_code = 1;
+  // ISO 3166-1 numeric country code (e.g. 840 = US, 124 = CA, 826 = GB)
+  int32 country_code = 1;
 
   // Address lines (street address, secondary address, etc.)
   repeated string address_lines = 2;
@@ -46,9 +46,6 @@ message PostalAddress {
   // Sub-locality (neighborhood, borough, district)
   optional string sub_locality = 6;
 
-  // Sorting code (CEDEX in France, etc.)
-  optional string sorting_code = 7;
-
   // Organization / company name
   optional string organization = 8;
 
@@ -56,24 +53,24 @@ message PostalAddress {
   optional string recipient = 9;
 }
 
-// --- ValidateAddress ---
+// --- VerifyAddress ---
 
-message ValidateAddressRequest {
-  // Address to validate
+message VerifyAddressRequest {
+  // Address to verify
   PostalAddress address = 1;
 
   // Optional provider override (e.g. "usps", "smarty")
   optional string provider_id = 2;
 }
 
-message ValidateAddressResponse {
-  // Validation outcome
-  ValidationStatus status = 1;
+message VerifyAddressResponse {
+  // Verification outcome
+  VerificationStatus status = 1;
 
-  // Standardized/corrected address (if validation succeeded)
+  // Standardized/corrected address (if verification succeeded)
   PostalAddress standardized_address = 2;
 
-  // Provider that performed the validation
+  // Provider that performed the verification
   string provider_id = 3;
 
   // Provider-specific metadata
@@ -81,12 +78,16 @@ message ValidateAddressResponse {
 
   // Human-readable message (e.g. error details)
   string message = 5;
+
+  // Geocoordinates (populated when provider supports them, e.g. Smarty)
+  optional double latitude = 6;
+  optional double longitude = 7;
 }
 
-enum ValidationStatus {
-  VALIDATION_STATUS_UNSPECIFIED = 0;
-  VALIDATED = 1;
-  VALIDATED_WITH_CORRECTIONS = 2;
+enum VerificationStatus {
+  VERIFICATION_STATUS_UNSPECIFIED = 0;
+  VERIFIED = 1;
+  VERIFIED_WITH_CORRECTIONS = 2;
   INVALID = 3;
   PROVIDER_UNAVAILABLE = 4;
   PROVIDER_ERROR = 5;
@@ -118,6 +119,13 @@ enum FormatStatus {
   FORMAT_UNSUPPORTED_COUNTRY = 4;
 }
 
+enum FormatIssueCode {
+  FORMAT_ISSUE_CODE_UNSPECIFIED = 0;
+  FIELD_REQUIRED = 1;
+  FIELD_INVALID = 2;
+  FIELD_CORRECTED = 3;
+}
+
 message FormatIssue {
   // Which field has the issue
   string field = 1;
@@ -125,8 +133,8 @@ message FormatIssue {
   // Severity of the issue
   FormatIssueSeverity severity = 2;
 
-  // Human-readable description
-  string message = 3;
+  // Machine-readable issue code (callers map code + field + country_code to localized messages)
+  FormatIssueCode code = 3;
 
   // Original value
   string original_value = 4;
@@ -153,6 +161,6 @@ message GetProvidersResponse {
 message ProviderInfo {
   string provider_id = 1;
   string display_name = 2;
-  repeated string supported_countries = 3;
+  repeated int32 supported_countries = 3;
   bool enabled = 4;
 }

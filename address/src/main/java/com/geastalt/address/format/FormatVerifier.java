@@ -10,13 +10,24 @@ package com.geastalt.address.format;
 
 public interface FormatVerifier {
 
-    String getCountryCode();
+    int getCountryCode();
 
-    FormatVerificationResult verify(String countryCode,
-                                    java.util.List<String> addressLines,
-                                    String locality,
-                                    String administrativeArea,
-                                    String postalCode,
-                                    String subLocality,
-                                    String sortingCode);
+    /**
+     * Verify the input values against country-specific standards.
+     * The validations generally follow the pattern of
+     * <ul>
+     * <li>Validate that the item is present (not blank / null)</li>
+     * <li>Check on the format if specific format rules exist</li>
+     * </ul>
+     *
+     * This method <i>does not</i> validate that the address
+     * is an actual address in the real world; this just does
+     * simple format verification.
+     */
+    FormatVerificationResult verify(final int countryCode,
+                                    final java.util.List<String> addressLines,
+                                    final String locality,
+                                    final String administrativeArea,
+                                    final String postalCode,
+                                    final String subLocality);
 }
