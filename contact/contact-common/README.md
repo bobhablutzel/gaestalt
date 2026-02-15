@@ -9,7 +9,7 @@ This module is a non-executable library that provides the foundational data laye
 ## Package Structure
 
 ```
-com.geastalt.contact/
+com.gaestalt.contact/
 ├── entity/              # JPA entities
 ├── repository/          # Spring Data JPA repositories
 ├── dto/                 # Data Transfer Objects
@@ -171,7 +171,7 @@ Add as a dependency in other modules:
 
 ```xml
 <dependency>
-    <groupId>com.geastalt</groupId>
+    <groupId>com.gaestalt</groupId>
     <artifactId>contact-common</artifactId>
     <version>${project.version}</version>
 </dependency>

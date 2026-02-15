@@ -2,7 +2,7 @@
 --
 -- Licensed under a dual-license model: freely available for non-commercial use;
 -- commercial use requires a separate license. See LICENSE file for details.
--- Contact license@geastalt.com for commercial licensing.
+-- Contact license@gaestalt.com for commercial licensing.
 
 -- SQL Server equivalent of PostgreSQL 011_create_contact_alternate_ids_table.sql
 -- Create contact_alternate_ids table for multiple alternate ID types per contact

@@ -4,7 +4,7 @@
 
   Licensed under a dual-license model: freely available for non-commercial use;
   commercial use requires a separate license. See LICENSE file for details.
-  Contact license@geastalt.com for commercial licensing.
+  Contact license@gaestalt.com for commercial licensing.
 -->
 
 <project xmlns="http://maven.apache.org/POM/4.0.0"
@@ -12,7 +12,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.geastalt</groupId>
+    <groupId>com.gaestalt</groupId>
     <artifactId>lockmgr</artifactId>
     <version>1.0.0-SNAPSHOT</version>
     <packaging>jar</packaging>

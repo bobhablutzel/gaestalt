@@ -121,39 +121,39 @@ mvn spring-boot:run
 
 ```bash
 # List available methods
-grpcurl -plaintext localhost:9001 list com.geastalt.contact.grpc.ContactService
+grpcurl -plaintext localhost:9001 list com.gaestalt.contact.grpc.ContactService
 
 # Create a contact
 grpcurl -plaintext -d '{"first_name": "John", "last_name": "Doe"}' \
-  localhost:9001 com.geastalt.contact.grpc.ContactService/CreateContact
+  localhost:9001 com.gaestalt.contact.grpc.ContactService/CreateContact
 
 # Get contact by ID
 grpcurl -plaintext -d '{"contact_id": 11780449}' \
-  localhost:9001 com.geastalt.contact.grpc.ContactService/GetContactById
+  localhost:9001 com.gaestalt.contact.grpc.ContactService/GetContactById
 
 # Search contacts
 grpcurl -plaintext -d '{"last_name": "smith", "max_results": 25}' \
-  localhost:9001 com.geastalt.contact.grpc.ContactService/SearchContacts
+  localhost:9001 com.gaestalt.contact.grpc.ContactService/SearchContacts
 
 # Check pending action
 grpcurl -plaintext -d '{"contact_id": 123, "action_type": "GENERATE_EXTERNAL_IDENTIFIERS"}' \
-  localhost:9001 com.geastalt.contact.grpc.ContactService/HasPendingAction
+  localhost:9001 com.gaestalt.contact.grpc.ContactService/HasPendingAction
 
 # Create a contract
 grpcurl -plaintext -d '{"contract_name": "Gold Plan", "company_id": "550e8400-e29b-41d4-a716-446655440000", "company_name": "Aetna"}' \
-  localhost:9001 com.geastalt.contact.grpc.ContactService/CreateContract
+  localhost:9001 com.gaestalt.contact.grpc.ContactService/CreateContract
 
 # Get all contracts
 grpcurl -plaintext -d '{}' \
-  localhost:9001 com.geastalt.contact.grpc.ContactService/GetContracts
+  localhost:9001 com.gaestalt.contact.grpc.ContactService/GetContracts
 
 # Add contract to contact (dates in ISO 8601 UTC)
 grpcurl -plaintext -d '{"contact_id": 11780449, "contract_id": "550e8400-e29b-41d4-a716-446655440000", "effective_date": "2026-01-01T00:00:00Z", "expiration_date": "2026-12-31T23:59:59Z"}' \
-  localhost:9001 com.geastalt.contact.grpc.ContactService/AddContactContract
+  localhost:9001 com.gaestalt.contact.grpc.ContactService/AddContactContract
 
 # Get current contract for a contact
 grpcurl -plaintext -d '{"contact_id": 11780449}' \
-  localhost:9001 com.geastalt.contact.grpc.ContactService/GetCurrentContactContract
+  localhost:9001 com.gaestalt.contact.grpc.ContactService/GetCurrentContactContract
 ```
 
 ## Kubernetes Deployment

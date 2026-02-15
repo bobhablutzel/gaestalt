@@ -2,7 +2,7 @@
 --
 -- Licensed under a dual-license model: freely available for non-commercial use;
 -- commercial use requires a separate license. See LICENSE file for details.
--- Contact license@geastalt.com for commercial licensing.
+-- Contact license@gaestalt.com for commercial licensing.
 
 -- Create contact_addresses table
 -- This script is idempotent and can be run multiple times safely

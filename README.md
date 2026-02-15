@@ -1,18 +1,22 @@
-# Geastalt
+# Gaestalt
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="geastaltlogo-dark.png">
-  <source media="(prefers-color-scheme: light)" srcset="geastaltlogo-light.png">
-  <img src="geastaltlogo-light.png" alt="Geastalt name with G made up of parts">
+  <source media="(prefers-color-scheme: dark)" srcset="gaestaltlogo-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="gaestaltlogo-light.png">
+  <img src="gaestaltlogo-light.png" alt="Gaestalt name with G made up of parts">
 </picture>
 
-Geastalt accelerates the creation of enterprise applications within medium- to large-scale
-organizations. Geastalt is a toolkit of components, each of which can be used independently
+Gaestalt accelerates the creation of enterprise applications within medium- to large-scale
+organizations. Gaestalt is a toolkit of components, each of which can be used independently
 or in conjunction with the other components in the
 
-The geastalt system covers all the key business areas needed for most businesses, 
+The gaestalt system covers all the key business areas needed for most businesses, 
 including core concepts such as customer and supporting functions such as notification
 and address validation. 
+
+Gaestalt is written wtih agentic agents in mind. The goal of the project is to have 
+components that are well document and easy to reason about for both human and agentic 
+programmers.
 
 ## Systems
 
@@ -27,7 +31,7 @@ and address validation.
 ## Structure
 
 ```
-geastalt/
+gaestalt/
 ├── address/           # Address validation service
 │   ├── format/
 │   ├── format/ca
@@ -66,7 +70,7 @@ geastalt/
 ```mermaid
 block
   columns 3
-  owner["Geastalt Business Architecture"]:3
+  owner["Gaestalt Business Architecture"]:3
   block:appGroup:2
     columns 2
     Mobile Web Desktop API
@@ -112,3 +116,4 @@ style owner fill:#087,color:#000,stroke-width:0,font-size:70px;
 - [ ] split OAuth capabilities out of address into common library
 - [ ] support additional address providers
 - [ ] build native address cleansing capability
+- [ ] check for non-streaming code & replace

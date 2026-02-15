@@ -198,7 +198,7 @@ flowchart LR
 
 ## API Reference
 
-The address service exposes three gRPC RPCs on port 9010 via `com.geastalt.address.grpc.AddressService`. All RPCs use the shared `PostalAddress` message type described below.
+The address service exposes three gRPC RPCs on port 9010 via `com.gaestalt.address.grpc.AddressService`. All RPCs use the shared `PostalAddress` message type described below.
 
 ### PostalAddress
 
@@ -302,7 +302,7 @@ grpcurl -plaintext -d '{
     "administrative_area": "DC",
     "postal_code": "20500"
   }
-}' localhost:9010 com.geastalt.address.grpc.AddressService/VerifyAddress
+}' localhost:9010 com.gaestalt.address.grpc.AddressService/VerifyAddress
 ```
 
 Response:
@@ -343,7 +343,7 @@ grpcurl -plaintext -d '{
     "postal_code": "62704"
   },
   "provider_id": "usps"
-}' localhost:9010 com.geastalt.address.grpc.AddressService/VerifyAddress
+}' localhost:9010 com.gaestalt.address.grpc.AddressService/VerifyAddress
 ```
 
 Note: When using `provider_id` to force USPS, `latitude` and `longitude` will not be present in the response.
@@ -359,7 +359,7 @@ grpcurl -plaintext -d '{
     "administrative_area": "ON",
     "postal_code": "K1A 0A2"
   }
-}' localhost:9010 com.geastalt.address.grpc.AddressService/VerifyAddress
+}' localhost:9010 com.gaestalt.address.grpc.AddressService/VerifyAddress
 ```
 
 ---
@@ -420,7 +420,7 @@ grpcurl -plaintext -d '{
     "administrative_area": "IL",
     "postal_code": "62704"
   }
-}' localhost:9010 com.geastalt.address.grpc.AddressService/VerifyAddressFormat
+}' localhost:9010 com.gaestalt.address.grpc.AddressService/VerifyAddressFormat
 ```
 
 Response:
@@ -449,7 +449,7 @@ grpcurl -plaintext -d '{
     "administrative_area": "il",
     "postal_code": "62704"
   }
-}' localhost:9010 com.geastalt.address.grpc.AddressService/VerifyAddressFormat
+}' localhost:9010 com.gaestalt.address.grpc.AddressService/VerifyAddressFormat
 ```
 
 Response:
@@ -487,7 +487,7 @@ grpcurl -plaintext -d '{
     "administrative_area": "IL",
     "postal_code": "ABCDE"
   }
-}' localhost:9010 com.geastalt.address.grpc.AddressService/VerifyAddressFormat
+}' localhost:9010 com.gaestalt.address.grpc.AddressService/VerifyAddressFormat
 ```
 
 Response:
@@ -525,7 +525,7 @@ grpcurl -plaintext -d '{
     "administrative_area": "ON",
     "postal_code": "K1A 0A2"
   }
-}' localhost:9010 com.geastalt.address.grpc.AddressService/VerifyAddressFormat
+}' localhost:9010 com.gaestalt.address.grpc.AddressService/VerifyAddressFormat
 ```
 
 ---
@@ -560,7 +560,7 @@ Empty message — no parameters.
 #### Example
 
 ```bash
-grpcurl -plaintext -d '{}' localhost:9010 com.geastalt.address.grpc.AddressService/GetProviders
+grpcurl -plaintext -d '{}' localhost:9010 com.gaestalt.address.grpc.AddressService/GetProviders
 ```
 
 Response:
@@ -646,7 +646,7 @@ mvn test
 grpcurl -plaintext localhost:9010 list
 
 # Describe service methods
-grpcurl -plaintext localhost:9010 describe com.geastalt.address.grpc.AddressService
+grpcurl -plaintext localhost:9010 describe com.gaestalt.address.grpc.AddressService
 ```
 
 See the [API Reference](#api-reference) above for `grpcurl` examples for each RPC.

@@ -3,15 +3,15 @@
  *
  * Licensed under a dual-license model: freely available for non-commercial use;
  * commercial use requires a separate license. See LICENSE file for details.
- * Contact license@geastalt.com for commercial licensing.
+ * Contact license@gaestalt.com for commercial licensing.
  */
 
 syntax = "proto3";
 
-package com.geastalt.lock.raft;
+package com.gaestalt.lock.raft;
 
 option java_multiple_files = true;
-option java_package = "com.geastalt.lock.raft.generated";
+option java_package = "com.gaestalt.lock.raft.generated";
 option java_outer_classname = "RaftServiceProto";
 
 // Raft consensus service for intra-cluster communication

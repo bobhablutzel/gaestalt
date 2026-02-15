@@ -3,15 +3,15 @@
  *
  * Licensed under a dual-license model: freely available for non-commercial use;
  * commercial use requires a separate license. See LICENSE file for details.
- * Contact license@geastalt.com for commercial licensing.
+ * Contact license@gaestalt.com for commercial licensing.
  */
 
 syntax = "proto3";
 
-package com.geastalt.lock.grpc;
+package com.gaestalt.lock.grpc;
 
 option java_multiple_files = true;
-option java_package = "com.geastalt.lock.grpc.generated";
+option java_package = "com.gaestalt.lock.grpc.generated";
 option java_outer_classname = "LockServiceProto";
 
 // Client-facing Lock Service API

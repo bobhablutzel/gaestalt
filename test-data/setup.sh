@@ -4,7 +4,7 @@
 #
 # Licensed under a dual-license model: freely available for non-commercial use;
 # commercial use requires a separate license. See LICENSE file for details.
-# Contact license@geastalt.com for commercial licensing.
+# Contact license@gaestalt.com for commercial licensing.
 
 # ============================================================================
 # Test Environment Setup Script
@@ -28,7 +28,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 ENV_FILE="$SCRIPT_DIR/.env"
 LOG_FILE="$SCRIPT_DIR/setup.log"
-K8S_NAMESPACE="geastalt"
+K8S_NAMESPACE="gaestalt"
 ISTIO_GATEWAY_PORT="9080"
 
 # ANSI colors
@@ -91,7 +91,7 @@ DB_NAME=${DB_NAME:-contact}
 DB_USER=${DB_USER:-bob}
 DB_PASSWORD=${DB_PASSWORD:-}
 DEPLOY_MODE=${DEPLOY_MODE:-}
-K8S_NAMESPACE=${K8S_NAMESPACE:-geastalt}
+K8S_NAMESPACE=${K8S_NAMESPACE:-gaestalt}
 EOF
     chmod 600 "$ENV_FILE"
     success "Configuration saved to $ENV_FILE"
@@ -1319,7 +1319,7 @@ run_load_test() {
     info "Starting load test: --no-seed $concurrency $burn_in $duration (host=$grpc_host port=$grpc_port)"
     echo ""
 
-    java -cp "$classpath" com.geastalt.contact.GrpcLoadTest \
+    java -cp "$classpath" com.gaestalt.contact.GrpcLoadTest \
         --no-seed "$concurrency" "$burn_in" "$duration" 8 200 "$grpc_host" "$grpc_port" \
         2>&1 | tee -a "$LOG_FILE"
 
@@ -1784,7 +1784,7 @@ evaluate_environment() {
 show_menu() {
     echo ""
     echo -e "${BOLD}╔══════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${BOLD}║          Geastalt Test Environment Setup                     ║${NC}"
+    echo -e "${BOLD}║          Gaestalt Test Environment Setup                     ║${NC}"
     echo -e "${BOLD}╚══════════════════════════════════════════════════════════════╝${NC}"
     echo ""
 

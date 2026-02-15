@@ -2,7 +2,7 @@
 #
 # Licensed under a dual-license model: freely available for non-commercial use;
 # commercial use requires a separate license. See LICENSE file for details.
-# Contact license@geastalt.com for commercial licensing.
+# Contact license@gaestalt.com for commercial licensing.
 
 # Default values for contact-istio
 # This is a YAML-formatted file.
@@ -17,7 +17,7 @@ gateway:
 # Service configuration
 service:
   name: contact-api
-  namespace: geastalt
+  namespace: gaestalt
   grpcPort: 9001
   httpPort: 9002
 

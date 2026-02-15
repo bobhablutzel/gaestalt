@@ -4,7 +4,7 @@
 
   Licensed under a dual-license model: freely available for non-commercial use;
   commercial use requires a separate license. See LICENSE file for details.
-  Contact license@geastalt.com for commercial licensing.
+  Contact license@gaestalt.com for commercial licensing.
 -->
 
 <project xmlns="http://maven.apache.org/POM/4.0.0"
@@ -13,7 +13,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.geastalt</groupId>
+        <groupId>com.gaestalt</groupId>
         <artifactId>contact-parent</artifactId>
         <version>0.0.1-SNAPSHOT</version>
     </parent>
@@ -24,7 +24,7 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.geastalt</groupId>
+            <groupId>com.gaestalt</groupId>
             <artifactId>contact-common</artifactId>
         </dependency>
 

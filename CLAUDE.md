@@ -1,4 +1,4 @@
-# Geastalt Mono-Repo
+# Gaestalt Mono-Repo
 
 ## Documentation
 Documentation maintained in a README.md at both the project and module level
@@ -15,7 +15,7 @@ Architecture diagrams use Mermaid notation for integration with GitHub
 - Every chart has `templates/_helpers.tpl` with `name`, `fullname`, `chart`, `labels`, `selectorLabels` helpers
 - Kubernetes recommended labels on all resources: `app.kubernetes.io/name`, `/instance`, `/version`, `/managed-by`, `helm.sh/chart`
 - Resource names use `include "<chart>.fullname"`, selectors use `include "<chart>.selectorLabels"`
-- `Chart.yaml` must include `keywords` and `maintainers: Geastalt`
+- `Chart.yaml` must include `keywords` and `maintainers: Gaestalt`
 
 ### Dockerfiles
 - Pinned base images: `eclipse-temurin:21.0.9_10-jdk` (build), `eclipse-temurin:21.0.9_10-jre-alpine-3.22` (runtime)
@@ -26,9 +26,9 @@ Architecture diagrams use Mermaid notation for integration with GitHub
 - Clean apt lists in build stage: `rm -rf /var/lib/apt/lists/*`
 
 ### Java Packages
-- Convention: `com.geastalt.<system>.*` (e.g. `com.geastalt.contact`, `com.geastalt.lock`)
-- Proto generated code: `com.geastalt.<system>.grpc.generated`
-- Maven groupId: `com.geastalt`
+- Convention: `com.gaestalt.<system>.*` (e.g. `com.gaestalt.contact`, `com.gaestalt.lock`)
+- Proto generated code: `com.gaestalt.<system>.grpc.generated`
+- Maven groupId: `com.gaestalt`
 
 ### Async Modules (Kafka-based)
 - Prefix: `async-` for all Kafka consumer function apps
@@ -67,23 +67,23 @@ lsof -i :9001
 ### Testing gRPC Endpoints
 ```bash
 # List available methods
-grpcurl -plaintext localhost:9001 list com.geastalt.contact.grpc.ContactService
+grpcurl -plaintext localhost:9001 list com.gaestalt.contact.grpc.ContactService
 
 # Example calls
-grpcurl -plaintext -d '{"contact_id": 11780449}' localhost:9001 com.geastalt.contact.grpc.ContactService/GetContactById
-grpcurl -plaintext -d '{"last_name": "smith", "max_results": 25}' localhost:9001 com.geastalt.contact.grpc.ContactService/SearchContacts
+grpcurl -plaintext -d '{"contact_id": 11780449}' localhost:9001 com.gaestalt.contact.grpc.ContactService/GetContactById
+grpcurl -plaintext -d '{"last_name": "smith", "max_results": 25}' localhost:9001 com.gaestalt.contact.grpc.ContactService/SearchContacts
 ```
 
 ### Load Testing
-- Load test class: `contact/contact-api/src/test/java/com/geastalt/contact/GrpcLoadTest.java`
+- Load test class: `contact/contact-api/src/test/java/com/gaestalt/contact/GrpcLoadTest.java`
 - Tests all gRPC endpoints with burn-in phase followed by sustained load
 - Usage: `java GrpcLoadTest [concurrency] [burnInSeconds] [testDurationSeconds]`
 - Defaults: 50 concurrent, 30s burn-in, 300s (5 min) test
 
 ### Key Files
 - Proto definitions: `contact/contact-api/src/main/proto/contact.proto`
-- gRPC service impl: `contact/contact-api/src/main/java/com/geastalt/contact/grpc/ContactServiceImpl.java`
-- JDBC repository: `contact/contact-common/src/main/java/com/geastalt/contact/repository/ContactSearchJdbcRepository.java`
+- gRPC service impl: `contact/contact-api/src/main/java/com/gaestalt/contact/grpc/ContactServiceImpl.java`
+- JDBC repository: `contact/contact-common/src/main/java/com/gaestalt/contact/repository/ContactSearchJdbcRepository.java`
 - Application config: `contact/contact-api/src/main/resources/application.yml`
 - Kubernetes manifests: `contact/terraform/kubernetes/`
 
@@ -107,8 +107,8 @@ grpcurl -plaintext -d '{"last_name": "smith", "max_results": 25}' localhost:9001
 - Add/Update/Remove operations for addresses, emails, phones
 
 ### Recent Changes
-- Restructured from standalone repo to geastalt mono-repo
-- Renamed packages from com.nationsbenefits to com.geastalt
+- Restructured from standalone repo to gaestalt mono-repo
+- Renamed packages from com.nationsbenefits to com.gaestalt
 - Refactored external IDs to alternate IDs with multiple types per contact
 - Fixed N+1 query problem in search endpoints using batch fetching
 - Added GetContactById gRPC endpoint
@@ -144,24 +144,24 @@ grpcurl -plaintext localhost:9010 list
 
 # Verify an address (country_code is ISO 3166-1 numeric: 840=US, 124=CA, 826=GB)
 grpcurl -plaintext -d '{"address":{"country_code":840,"address_lines":["123 Main St"],"locality":"Springfield","administrative_area":"IL","postal_code":"62704"}}' \
-  localhost:9010 com.geastalt.address.grpc.AddressService/VerifyAddress
+  localhost:9010 com.gaestalt.address.grpc.AddressService/VerifyAddress
 
 # Verify address format
 grpcurl -plaintext -d '{"address":{"country_code":840,"address_lines":["123 Main St"],"locality":"Springfield","administrative_area":"IL","postal_code":"62704"}}' \
-  localhost:9010 com.geastalt.address.grpc.AddressService/VerifyAddressFormat
+  localhost:9010 com.gaestalt.address.grpc.AddressService/VerifyAddressFormat
 
 # List available providers
-grpcurl -plaintext -d '{}' localhost:9010 com.geastalt.address.grpc.AddressService/GetProviders
+grpcurl -plaintext -d '{}' localhost:9010 com.gaestalt.address.grpc.AddressService/GetProviders
 ```
 
 ### Key Files
 - Proto definition: `address/src/main/proto/address_service.proto`
-- gRPC service: `address/src/main/java/com/geastalt/address/grpc/AddressGrpcService.java`
-- Provider registry: `address/src/main/java/com/geastalt/address/provider/ProviderRegistry.java`
-- Provider router: `address/src/main/java/com/geastalt/address/provider/routing/ProviderRouter.java`
-- USPS provider: `address/src/main/java/com/geastalt/address/provider/usps/UspsValidationProvider.java`
-- Smarty provider: `address/src/main/java/com/geastalt/address/provider/smarty/SmartyValidationProvider.java`
-- Format verifiers: `address/src/main/java/com/geastalt/address/format/`
+- gRPC service: `address/src/main/java/com/gaestalt/address/grpc/AddressGrpcService.java`
+- Provider registry: `address/src/main/java/com/gaestalt/address/provider/ProviderRegistry.java`
+- Provider router: `address/src/main/java/com/gaestalt/address/provider/routing/ProviderRouter.java`
+- USPS provider: `address/src/main/java/com/gaestalt/address/provider/usps/UspsValidationProvider.java`
+- Smarty provider: `address/src/main/java/com/gaestalt/address/provider/smarty/SmartyValidationProvider.java`
+- Format verifiers: `address/src/main/java/com/gaestalt/address/format/`
 - Application config: `address/src/main/resources/application.yml`
 - Helm chart: `address/helm/address/`
 
@@ -225,20 +225,20 @@ helm upgrade --install lockmgr-us-east helm/lockmgr -f helm/lockmgr/values-us-ea
 grpcurl -plaintext localhost:9090 list
 
 # Acquire a lock
-grpcurl -plaintext -d '{"lock_id": "550e8400-e29b-41d4-a716-446655440000", "client_id": "my-client", "timeout_ms": 30000}' localhost:9090 com.geastalt.lock.grpc.LockService/AcquireLock
+grpcurl -plaintext -d '{"lock_id": "550e8400-e29b-41d4-a716-446655440000", "client_id": "my-client", "timeout_ms": 30000}' localhost:9090 com.gaestalt.lock.grpc.LockService/AcquireLock
 
 # Check lock status
-grpcurl -plaintext -d '{"lock_id": "550e8400-e29b-41d4-a716-446655440000"}' localhost:9090 com.geastalt.lock.grpc.LockService/CheckLock
+grpcurl -plaintext -d '{"lock_id": "550e8400-e29b-41d4-a716-446655440000"}' localhost:9090 com.gaestalt.lock.grpc.LockService/CheckLock
 
 # Release a lock
-grpcurl -plaintext -d '{"lock_id": "550e8400-e29b-41d4-a716-446655440000", "client_id": "my-client", "fencing_token": 1}' localhost:9090 com.geastalt.lock.grpc.LockService/ReleaseLock
+grpcurl -plaintext -d '{"lock_id": "550e8400-e29b-41d4-a716-446655440000", "client_id": "my-client", "fencing_token": 1}' localhost:9090 com.gaestalt.lock.grpc.LockService/ReleaseLock
 ```
 
 ### Key Files
 - Proto definitions: `lock/src/main/proto/lock_service.proto`, `raft_service.proto`, `region_service.proto`
-- gRPC service impl: `lock/src/main/java/com/geastalt/lock/grpc/LockGrpcService.java`
-- Raft consensus: `lock/src/main/java/com/geastalt/lock/raft/RaftNode.java`
-- Lock store: `lock/src/main/java/com/geastalt/lock/service/LockStore.java`
+- gRPC service impl: `lock/src/main/java/com/gaestalt/lock/grpc/LockGrpcService.java`
+- Raft consensus: `lock/src/main/java/com/gaestalt/lock/raft/RaftNode.java`
+- Lock store: `lock/src/main/java/com/gaestalt/lock/service/LockStore.java`
 - Application config: `lock/src/main/resources/application.yml`
 - Helm charts: `lock/helm/lockmgr/`, `lock/helm/lockmgr-istio/`
 

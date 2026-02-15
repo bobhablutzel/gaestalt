@@ -1,0 +1,111 @@
+/*
+ * Copyright (c) 2026 Bob Hablutzel. All rights reserved.
+ *
+ * Licensed under a dual-license model: freely available for non-commercial use;
+ * commercial use requires a separate license. See LICENSE file for details.
+ * Contact license@gaestalt.com for commercial licensing.
+ */
+
+package com.gaestalt.address.provider.usps;
+
+import io.opentelemetry.api.common.AttributeKey;
+import io.opentelemetry.api.trace.StatusCode;
+import io.opentelemetry.api.trace.Tracer;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClient;
+
+import java.time.Instant;
+import java.util.concurrent.locks.ReentrantLock;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class UspsOAuthService {
+
+    private final UspsConfig uspsConfig;
+    private final RestClient.Builder restClientBuilder;
+    private final Tracer tracer;
+
+    private String cachedToken;
+    private Instant tokenExpiry;
+    private final ReentrantLock tokenLock = new ReentrantLock();
+
+    private static final int TOKEN_EXPIRY_BUFFER_SECONDS = 60;
+
+    public String getAccessToken() {
+        tokenLock.lock();
+        try {
+            if (isTokenValid()) {
+                log.debug("Using cached USPS OAuth token");
+                return cachedToken;
+            }
+
+            log.info("Requesting new USPS OAuth token");
+            final var response = requestNewToken();
+
+            cachedToken = response.getAccessToken();
+            final var expiresIn = Integer.parseInt(response.getExpiresIn());
+            tokenExpiry = Instant.now().plusSeconds(expiresIn - TOKEN_EXPIRY_BUFFER_SECONDS);
+
+            log.info("USPS OAuth token obtained, expires at: {}", tokenExpiry);
+            return cachedToken;
+        } finally {
+            tokenLock.unlock();
+        }
+    }
+
+    private boolean isTokenValid() {
+        return cachedToken != null && tokenExpiry != null && Instant.now().isBefore(tokenExpiry);
+    }
+
+    private UspsOAuthTokenResponse requestNewToken() {
+        final var span = tracer.spanBuilder("usps.oauth.token")
+                .setAttribute(AttributeKey.stringKey("http.method"), "POST")
+                .startSpan();
+        try (final var scope = span.makeCurrent()) {
+            final var restClient = restClientBuilder
+                    .baseUrl(uspsConfig.getBaseUrl())
+                    .build();
+
+            final var request = UspsOAuthTokenRequest.builder()
+                    .clientId(uspsConfig.getClientId())
+                    .clientSecret(uspsConfig.getClientSecret())
+                    .grantType(uspsConfig.getOauth().getGrantType())
+                    .build();
+
+            final var response = restClient.post()
+                    .uri(uspsConfig.getOauth().getTokenPath())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(request)
+                    .retrieve()
+                    .body(UspsOAuthTokenResponse.class);
+
+            if (response == null || response.getAccessToken() == null) {
+                throw new RuntimeException("Failed to obtain USPS OAuth token");
+            }
+
+            span.setStatus(StatusCode.OK);
+            return response;
+        } catch (Exception e) {
+            span.setStatus(StatusCode.ERROR, e.getMessage());
+            span.recordException(e);
+            throw e;
+        } finally {
+            span.end();
+        }
+    }
+
+    public void invalidateToken() {
+        tokenLock.lock();
+        try {
+            cachedToken = null;
+            tokenExpiry = null;
+            log.info("USPS OAuth token invalidated");
+        } finally {
+            tokenLock.unlock();
+        }
+    }
+}

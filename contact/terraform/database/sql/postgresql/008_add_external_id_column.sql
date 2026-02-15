@@ -2,7 +2,7 @@
 --
 -- Licensed under a dual-license model: freely available for non-commercial use;
 -- commercial use requires a separate license. See LICENSE file for details.
--- Contact license@geastalt.com for commercial licensing.
+-- Contact license@gaestalt.com for commercial licensing.
 
 -- Add external_id column to contacts table for non-sequential contact identifiers
 -- External IDs have format "NH" + 15 digits (e.g., "NH847293615028374")

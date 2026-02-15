@@ -121,7 +121,7 @@ Contact plans use ISO 8601 UTC datetime format (e.g., `2026-01-01T00:00:00Z`) fo
 grpcurl -plaintext -d '{
   "first_name": "John",
   "last_name": "Doe"
-}' localhost:9001 com.geastalt.contact.grpc.ContactService/CreateContact
+}' localhost:9001 com.gaestalt.contact.grpc.ContactService/CreateContact
 ```
 
 ### Create Contact Without Pending Actions
@@ -132,7 +132,7 @@ grpcurl -plaintext -d '{
   "last_name": "Smith",
   "skip_generate_external_identifiers": true,
   "skip_validate_address": true
-}' localhost:9001 com.geastalt.contact.grpc.ContactService/CreateContact
+}' localhost:9001 com.gaestalt.contact.grpc.ContactService/CreateContact
 ```
 
 ### Search Contacts
@@ -141,7 +141,7 @@ grpcurl -plaintext -d '{
 grpcurl -plaintext -d '{
   "last_name": "smith*",
   "max_results": 25
-}' localhost:9001 com.geastalt.contact.grpc.ContactService/SearchContacts
+}' localhost:9001 com.gaestalt.contact.grpc.ContactService/SearchContacts
 ```
 
 ### Check Pending Action
@@ -150,7 +150,7 @@ grpcurl -plaintext -d '{
 grpcurl -plaintext -d '{
   "contact_id": 12345,
   "action_type": "GENERATE_EXTERNAL_IDENTIFIERS"
-}' localhost:9001 com.geastalt.contact.grpc.ContactService/HasPendingAction
+}' localhost:9001 com.gaestalt.contact.grpc.ContactService/HasPendingAction
 ```
 
 ### Create a Plan
@@ -160,7 +160,7 @@ grpcurl -plaintext -d '{
   "plan_name": "Gold Plan",
   "carrier_id": 1,
   "carrier_name": "Aetna"
-}' localhost:9001 com.geastalt.contact.grpc.ContactService/CreatePlan
+}' localhost:9001 com.gaestalt.contact.grpc.ContactService/CreatePlan
 ```
 
 ### Add Plan to Contact
@@ -171,7 +171,7 @@ grpcurl -plaintext -d '{
   "plan_id": 1,
   "effective_date": "2026-01-01T00:00:00Z",
   "expiration_date": "2026-12-31T23:59:59Z"
-}' localhost:9001 com.geastalt.contact.grpc.ContactService/AddContactPlan
+}' localhost:9001 com.gaestalt.contact.grpc.ContactService/AddContactPlan
 ```
 
 ### Get Current Contact Plan
@@ -179,14 +179,14 @@ grpcurl -plaintext -d '{
 ```bash
 grpcurl -plaintext -d '{
   "contact_id": 11780449
-}' localhost:9001 com.geastalt.contact.grpc.ContactService/GetCurrentContactPlan
+}' localhost:9001 com.gaestalt.contact.grpc.ContactService/GetCurrentContactPlan
 ```
 
 ### Get All Plans
 
 ```bash
 grpcurl -plaintext -d '{}' \
-  localhost:9001 com.geastalt.contact.grpc.ContactService/GetPlans
+  localhost:9001 com.gaestalt.contact.grpc.ContactService/GetPlans
 ```
 
 ## Configuration

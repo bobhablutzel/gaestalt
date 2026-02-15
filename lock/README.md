@@ -174,7 +174,7 @@ grpcurl -plaintext -authority locks.example.com -d '{
   "lock_id": "550e8400-e29b-41d4-a716-446655440000",
   "client_id": "my-client",
   "timeout_ms": 30000
-}' localhost:80 com.geastalt.lock.grpc.LockService/AcquireLock
+}' localhost:80 com.gaestalt.lock.grpc.LockService/AcquireLock
 
 # Route to US-West using x-region header
 grpcurl -plaintext -authority locks.example.com \
@@ -182,12 +182,12 @@ grpcurl -plaintext -authority locks.example.com \
   "lock_id": "660e8400-e29b-41d4-a716-446655440001",
   "client_id": "west-client",
   "timeout_ms": 30000
-}' localhost:80 com.geastalt.lock.grpc.LockService/AcquireLock
+}' localhost:80 com.gaestalt.lock.grpc.LockService/AcquireLock
 
 # Check lock status
 grpcurl -plaintext -authority locks.example.com -d '{
   "lock_id": "550e8400-e29b-41d4-a716-446655440000"
-}' localhost:80 com.geastalt.lock.grpc.LockService/CheckLock
+}' localhost:80 com.gaestalt.lock.grpc.LockService/CheckLock
 ```
 
 **Alternative: Port-forward (if hostPort isn't available)**
@@ -204,7 +204,7 @@ export GATEWAY_IP=$(kubectl get svc istio-ingressgateway -n istio-system \
   -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
 
 grpcurl -plaintext -authority locks.example.com $GATEWAY_IP:80 \
-  com.geastalt.lock.grpc.LockService/AcquireLock
+  com.gaestalt.lock.grpc.LockService/AcquireLock
 ```
 
 ### Istio Features
@@ -255,7 +255,7 @@ grpcurl -plaintext -d '{
   "lock_id": "550e8400-e29b-41d4-a716-446655440000",
   "client_id": "my-client-1",
   "timeout_ms": 30000
-}' localhost:9090 com.geastalt.lock.grpc.LockService/AcquireLock
+}' localhost:9090 com.gaestalt.lock.grpc.LockService/AcquireLock
 ```
 
 Expected response:
@@ -273,7 +273,7 @@ Expected response:
 ```bash
 grpcurl -plaintext -d '{
   "lock_id": "550e8400-e29b-41d4-a716-446655440000"
-}' localhost:9090 com.geastalt.lock.grpc.LockService/CheckLock
+}' localhost:9090 com.gaestalt.lock.grpc.LockService/CheckLock
 ```
 
 ### Release a Lock
@@ -285,7 +285,7 @@ grpcurl -plaintext -d '{
   "lock_id": "550e8400-e29b-41d4-a716-446655440000",
   "client_id": "my-client-1",
   "fencing_token": 1
-}' localhost:9090 com.geastalt.lock.grpc.LockService/ReleaseLock
+}' localhost:9090 com.gaestalt.lock.grpc.LockService/ReleaseLock
 ```
 
 ### Test Lock Contention
@@ -298,7 +298,7 @@ grpcurl -plaintext -d '{
   "lock_id": "550e8400-e29b-41d4-a716-446655440000",
   "client_id": "client-A",
   "timeout_ms": 60000
-}' localhost:9090 com.geastalt.lock.grpc.LockService/AcquireLock
+}' localhost:9090 com.gaestalt.lock.grpc.LockService/AcquireLock
 ```
 
 **Terminal 2:**
@@ -307,7 +307,7 @@ grpcurl -plaintext -d '{
   "lock_id": "550e8400-e29b-41d4-a716-446655440000",
   "client_id": "client-B",
   "timeout_ms": 60000
-}' localhost:9090 com.geastalt.lock.grpc.LockService/AcquireLock
+}' localhost:9090 com.gaestalt.lock.grpc.LockService/AcquireLock
 ```
 
 The second request will fail with `LOCK_STATUS_ALREADY_LOCKED`.
@@ -372,4 +372,4 @@ Environment variables:
 
 ## License
 
-Proprietary - Geastalt
+Proprietary - Gaestalt

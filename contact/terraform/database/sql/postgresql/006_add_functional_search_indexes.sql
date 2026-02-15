@@ -2,7 +2,7 @@
 --
 -- Licensed under a dual-license model: freely available for non-commercial use;
 -- commercial use requires a separate license. See LICENSE file for details.
--- Contact license@geastalt.com for commercial licensing.
+-- Contact license@gaestalt.com for commercial licensing.
 
 -- Create functional indexes for case-insensitive name search
 -- These indexes use LOWER() with varchar_pattern_ops for efficient prefix queries (e.g., 'smith%')
